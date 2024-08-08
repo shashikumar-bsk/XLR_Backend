@@ -25,6 +25,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.624.0",
     "@types/axios": "^0.14.0",
+    "@types/dotenv": "^8.2.0",
     "@types/multer": "^1.4.11",
     "@types/multer-s3": "^3.0.3",
     "axios": "^1.7.3",

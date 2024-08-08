@@ -1,5 +1,6 @@
 const isDev = true;
-
+import dotenv from 'dotenv'
+dotenv.config();
 import { Booking } from './models';
 import Admin from './models/admin';
 import Driver from './models/driver';
