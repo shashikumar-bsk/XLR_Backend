@@ -67,7 +67,14 @@ Admin.init({
 }, {
     timestamps: true,
     sequelize: sequelizeConnection,
-    tableName: 'admin_tbl'
+    tableName: 'admin_tbl',
+    indexes: [
+        {
+            unique: true,
+            name: 'adminId_index',
+            fields: ['admin_id']
+        }
+    ]
 });
 
 export default Admin;

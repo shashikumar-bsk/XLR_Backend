@@ -61,7 +61,14 @@ Booking.init({
 }, {
     timestamps: true,
     sequelize: sequelizeConnection,
-    tableName: 'booking'
+    tableName: 'booking',
+    indexes: [
+        {
+            unique: true,
+            name: 'BookingId_index',
+            fields: ['booking_id']
+        }
+    ]
 });
 
 export default Booking;

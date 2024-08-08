@@ -27,7 +27,7 @@ ServiceType.init({
     }
 }, {
     sequelize: sequelizeConnection,
-    tableName: 'service_type'
+    tableName: 'service_type',
 });
 
 export default ServiceType;

@@ -60,7 +60,14 @@ Category.init({
 }, {
     timestamps: true,
     sequelize: sequelizeConnection,
-    tableName: 'categories'
+    tableName: 'categories',
+    indexes: [
+        {
+            unique: true,
+            name: 'categoryId_index',
+            fields: ['category_id']
+        }
+    ]
 });
 
 export default Category;

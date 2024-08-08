@@ -76,6 +76,13 @@ Restaurant.init({
     modelName: 'Restaurant',
     tableName: 'restaurants',
     timestamps: true,
+    indexes: [
+        {
+            unique: true,
+            name: 'restaurantId_index',
+            fields: ['id']
+        }
+    ]
 });
 
 // Define the association

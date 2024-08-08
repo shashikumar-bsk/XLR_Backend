@@ -67,6 +67,13 @@ Dish.init({
     modelName: 'Dish',
     tableName: 'dish',
     timestamps: true,
+    indexes: [
+        {
+            unique: true,
+            name: 'dishesId_index',
+            fields: ['id']
+        }
+    ]
 });
 
 Dish.belongsTo(Image, { foreignKey: 'image_id' });

@@ -93,7 +93,19 @@ Address.init({
   sequelize: sequelizeConnection,
   tableName: 'address',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  indexes: [
+    {
+        unique: false,
+        name: 'address_userId_index',
+        fields: ['user_id']
+    },
+    {
+      unique: true,
+      name:'address_userId_index',
+      fields: ['address_id']
+    }
+]
 });
 
 export default Address;
