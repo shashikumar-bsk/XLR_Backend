@@ -61,7 +61,14 @@ SubCategory.init({
 }, {
     timestamps: true,
     sequelize: sequelizeConnection,
-    tableName: 'sub_categories'
+    tableName: 'sub_categories',
+    indexes: [
+        {
+            unique: true,
+            name: 'subCategoryId_index',
+            fields: ['sub_category_id']
+        }
+    ]
 });
 
 export default SubCategory;

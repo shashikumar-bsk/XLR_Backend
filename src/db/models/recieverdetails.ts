@@ -52,7 +52,14 @@ ReceiverDetails.init({
 }, {
     timestamps: true,
     sequelize: sequelizeConnection,
-    tableName: 'receiver_details'
+    tableName: 'receiver_details',
+    indexes: [
+        {
+            unique: true,
+            name: 'receiverId_index',
+            fields: ['receiver_id']
+        }
+    ]
 });
 
 // Set up the association

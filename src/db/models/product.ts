@@ -92,6 +92,13 @@ Product.init({
     modelName: 'Product',
     tableName: 'products',
     timestamps: true,
+    indexes: [
+        {
+            unique: true,
+            name: 'productId_index',
+            fields: ['product_id']
+        }
+    ]
 });
 
 export default Product;
