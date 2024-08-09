@@ -25,7 +25,7 @@ import UserTransaction from './models/userTransaction';
 
 import AddToCart from './models/add_to_cart';
 import DriverTransaction from './models/drivertransaction';
-
+import Vehicle from './models/vehicle';
 
 async function init() {
 
@@ -75,6 +75,7 @@ async function init() {
     await UserTransaction.sync({alter: isDev});
     await AddToCart.sync({alter: isDev});
     await DriverTransaction.sync({alter: isDev});
+    await Vehicle.sync({alter: isDev});
 
 }
 
