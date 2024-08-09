@@ -23,6 +23,8 @@ import inventoryRouter from "./inventory";
 import AddressRouter from "./AddressRoutes";
 import transactionRouter from "./userTransactionRoute";
 import cartRouter from "./add_to_cartRoute";
+import DriverTransaction from "../db/models/drivertransaction";
+import driverTransactionRouter from "./drivertransaction";
 
 const routes = Router();
 
@@ -44,15 +46,11 @@ routes.use('/dish',dishRouter)
 routes.use('/category',CategoryRouter)
 routes.use('/subcategory', SubCategoryRouter)
 routes.use('/supercategory', SuperCategoryRouter)
-
 routes.use('/brand',BrandRouter)
-// routes.use('/image',ImageRouter)
 routes.use('/inventory',inventoryRouter)
 routes.use('/images', ImageRouter)
-
 routes.use('/addresses', AddressRouter)
 routes.use('/transactions', transactionRouter)
 routes.use('/cart', cartRouter)
-
-
-export default routes
+routes.use('/drivertransactions',driverTransactionRouter)
+export default routes;

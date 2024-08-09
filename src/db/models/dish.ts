@@ -65,7 +65,7 @@ Dish.init({
 }, {
     sequelize: sequelizeConnection,
     modelName: 'Dish',
-    tableName: 'dish',
+    tableName: 'dishes', // Adjust if necessary
     timestamps: true,
 });
 
