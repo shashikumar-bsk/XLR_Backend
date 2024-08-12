@@ -1,7 +1,9 @@
+
 import express, { Request, Response } from 'express';
 import Driver from '../db/models/driver';
 import axios from 'axios';
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
 
 dotenv.config();
 const DriverOTPRouter = express.Router();
@@ -9,9 +11,10 @@ const DriverOTPRouter = express.Router();
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const APP_ID = process.env.APP_ID;
+const JWT_SECRET = process.env.JWT_SECRET; // Add your JWT_SECRET
 
-if (!CLIENT_ID || !CLIENT_SECRET || !APP_ID) {
-  throw new Error('CLIENT_ID, CLIENT_SECRET, or APP_ID is not defined in environment variables');
+if (!CLIENT_ID || !CLIENT_SECRET || !APP_ID || !JWT_SECRET) {
+  throw new Error('CLIENT_ID, CLIENT_SECRET, APP_ID, or JWT_SECRET is not defined in environment variables');
 }
 
 // Generate and send OTP
@@ -72,7 +75,6 @@ DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
   // Sanitize and validate phone number
   const sanitizedPhone = phone.replace(/\D/g, '');
   if (sanitizedPhone.length < 10 || sanitizedPhone.length > 15) {
-  
     return res.status(400).json({ error: 'Invalid phone number format' });
   }
 
@@ -93,7 +95,22 @@ DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
     console.log('OTP verify response:', response.data);
 
     if (response.data.isOTPVerified) {
-      res.json({ message: 'OTP Verified Successfully!' });
+      // Fetch driver by phone number
+      const driver = await Driver.findOne({ where: { phone: sanitizedPhone, is_deleted: false } });
+
+      if (driver) {
+        // Generate JWT token
+        const token = jwt.sign(
+          { id: driver.id, phone: sanitizedPhone }, // Include driver ID in payload
+          JWT_SECRET, 
+          { expiresIn: '1h' }
+        );
+        console.log('JWT Token:', token); // Log the token
+
+        res.json({ message: 'OTP Verified Successfully!', token });
+      } else {
+        res.status(404).json({ error: 'Driver not found or inactive' });
+      }
     } else {
       res.status(400).json({ error: 'Invalid OTP or phone number' });
     }
@@ -126,91 +143,5 @@ DriverOTPRouter.get('/check-driver', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch driver details' });
   }
 });
-
-// const api_key=process.env.API_KEY
-
-// // Generate and send OTP
-// DriverOTPRouter.post('/send-otp', async (req: Request, res: Response) => {
-//   const { phone } = req.body;
-//   console.log(phone,req.body)
-
-//   if (!phone) {
-//     return res.status(400).json({ error: 'Phone number is required' });
-//   }
-
-//   try {
-//     // Check if the driver exists and is active
-//     // const driver = await Driver.findOne({ where: { phone, is_deleted: false } });
-
-//     // console.log(driver)
-
-//     // if (!driver) {
-//     //   return res.status(404).json({ error: 'Driver not found or inactive' });
-//     // }
-
-//     // Send OTP using 2Factor.in API
-//     const response = await axios.get(
-
-//       `https://2factor.in/API/V1/${api_key}/SMS/${phone}/AUTOGEN3/OTP1`
-
-//     );
-
-//     if (response.data.Status === 'Success') {
-//       res.json({ message: 'OTP sent successfully' });
-//     } else {
-//       throw new Error('Failed to send OTP');
-//     }
-//   } catch (error) {
-//     console.error('Error sending OTP:', error);
-//     res.status(500).json({ error: 'Failed to send OTP' });
-//   }
-// });
-
-// // Verify OTP
-// DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
-//   const { phone, otp } = req.body;
-
-//   if (!phone || !otp) {
-//     return res.status(400).json({ error: 'Phone number and OTP are required' });
-//   }
-
-//   try {
-//     const response = await axios.get(
-
-//       `https://2factor.in/API/V1/${api_key}/SMS/VERIFY3/${phone}/${otp}`
-
-//     );
-
-//     if (response.data.Status === 'Success') {
-//       res.json({ message: 'OTP Verified Successfully!' });
-//     } else {
-//       res.status(400).json({ message: 'Invalid OTP' });
-//     }
-//   } catch (error) {
-//     console.error('Error verifying OTP:', error);
-//     res.status(500).json({ error: 'Failed to verify OTP' });
-//   }
-// });
-// // Fetch driver details by phone number
-// DriverOTPRouter.get('/check-driver', async (req: Request, res: Response) => {
-//   const phone = req.query.phone as string; // Ensure phoneNumber is treated as a string
-
-//   if (!phone) {
-//     return res.status(400).json({ error: 'Phone number is required' });
-//   }
-
-//   try {
-//     const driver = await Driver.findOne({ where: { phone: phone, is_deleted: false } });
-
-//     if (!driver) {
-//       return res.status(404).json({ error: 'Driver not found or inactive' });
-//     }
-
-//     res.json(driver);
-//   } catch (error) {
-//     console.error('Error fetching driver details:', error);
-//     res.status(500).json({ error: 'Failed to fetch driver details' });
-//   }
-// });
 
 export default DriverOTPRouter;

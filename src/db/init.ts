@@ -12,7 +12,7 @@ import ServiceType from './models/servicetype';
 import User from './models/users';
 import DriverEarnings from './models/driverearnings';
 import Restaurant from './models/restaurant';
-import dish from './models/dish';
+//mport dish from './models/dish';
 import Product from './models/product';
 import SubCategory from './models/SubCategory';
 import SuperCategory from './models/SuperCategory';
@@ -57,7 +57,7 @@ async function init() {
     await SuperCategory.sync({ alter: isDev });
     await Category.sync({ alter: isDev });
     await Restaurant.sync({alter: isDev});
-    await dish.sync({alter: isDev});
+    //await dish.sync({alter: isDev});
     await brand.sync({alter: isDev});
     await inventory.sync({alter: isDev});
     await Product.sync({alter: isDev});
