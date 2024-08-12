@@ -15,20 +15,16 @@ interface RideDetailsWithAssociations extends RideRequest {
   };
   Driver: {
     driver_name: string;
-    vehicle_type:string;
-
   };
   Booking: {
     booking_id: string;
     pickup_address: string;
     dropoff_address: string;
-    service_type_id: string;
   };
   ReceiverDetails: {
     receiver_id: string;
     receiver_name: string;
     receiver_phone_number: string;
-    service_type_id: string;
   }
 }
 
@@ -190,41 +186,35 @@ RideRequestRouter.get('/ride-requests/completed', async (req: Request, res: Resp
   }
 });
 
-
-// Get orders for a specific user
-RideRequestRouter.get('/user/:user_id', async (req: Request, res: Response) => {
+RideRequestRouter.get('/driver/:driver_id/completed-orders', async (req: Request, res: Response) => {
   try {
-    const { user_id } = req.params; 
+    const { driver_id } = req.params;
 
-    const getOrderDetails = await RideRequest.findAll({
-      where: { user_id: Number(user_id), is_deleted: false },
-      attributes: ['request_id', 'status'],
-      include: [
-        {
-          model: User,
-          attributes: ['id', 'username'],
-        },
-        {
-          model: Driver,
-          attributes: ['driver_id', 'driver_name', 'vehicle_type'],
-        },
-        {
-          model: Booking,
-          attributes: ['booking_id', 'pickup_address', 'dropoff_address', 'service_id'],
-        },
-      ]
+    const completedOrdersCount = await RideRequest.count({
+      where: { driver_id, status: 'Completed', is_deleted: false }
     });
 
-    if (getOrderDetails .length === 0) {
-      return res.status(404).json({ message: 'No completed ride requests found' });
-    }
-    
-    res.json(getOrderDetails);
-  } catch (error: any) {
-    console.error('Error in fetching completed ride requests:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(200).json({ completedOrdersCount });
+  } catch (error) {
+    console.error('Error in fetching completed orders count:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
+// Route for fetching missed orders by driver ID
+RideRequestRouter.get('/driver/:driver_id/missed-orders', async (req: Request, res: Response) => {
+  try {
+    const { driver_id } = req.params;
+
+    const MissedOrdersCount = await RideRequest.count({
+      where: { driver_id, status: 'rejected', is_deleted: false }
+    });
+
+    return res.status(200).json({ MissedOrdersCount });
+  } catch (error) {
+    console.error('Error in fetching completed orders count:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 
 export default RideRequestRouter;
