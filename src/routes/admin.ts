@@ -263,8 +263,8 @@ AdminRouter.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Reset password
-AdminRouter.patch('/reset-password', async (req: Request, res: Response) => {
+/// Reset password
+AdminRouter.patch('/reset-password/password', async (req: Request, res: Response) => {
   try {
     const { email, newPassword } = req.body;
     console.log(req.body);
@@ -289,10 +289,9 @@ AdminRouter.patch('/reset-password', async (req: Request, res: Response) => {
     return res.status(200).send({ message: 'Password reset successfully' });
   } catch (error: any) {
     console.error('Error in resetting password:', error);
-    return res.status(500).send({ message: `Error in resetting password: ${error.message}` });
+    return res.status(500).send({ message: `Error in resetting password:" ${error.message}` });
   }
 });
-
 // // Check if email exists
 // AdminRouter.post('/check-email', async (req: Request, res: Response) => {
 //   try {
@@ -536,4 +535,5 @@ AdminRouter.get('/:id', async (req: Request, res: Response) => {
 });
 
 });
+
 export default AdminRouter;
