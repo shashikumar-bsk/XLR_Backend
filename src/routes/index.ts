@@ -18,14 +18,21 @@ import CategoryRouter from "./CategoryRouter";
 import SubCategoryRouter from "./SubCategoryRouter";
 import SuperCategoryRouter from "./SuperCategoryRoutes";
 import BrandRouter from "./brand";
-import dishRouter from "./dish";
+// import dishRouter from "./dish";
 import inventoryRouter from "./inventory";
 import AddressRouter from "./AddressRoutes";
 import transactionRouter from "./userTransactionRoute";
+
 import cartRouter from "./add_to_cartRoute";
-import DriverTransaction from "../db/models/drivertransaction";
 import driverTransactionRouter from "./drivertransaction";
 import VehicleRouter from "./VehicleRouter";
+import orderrouter from "./order";
+// import OrderItemsRouter from "./order_items";
+// import paymentRouter from "./payment";
+
+ import cartRouter from "./add_to_cartRoute";
+import dishRouter from "./dish";
+import driverAuthRouter from "./driverAuthRouter";
 
 import OrderItemRouter from "./order_items";
 
@@ -36,9 +43,11 @@ routes.use('/driver', DriverRouter)
 routes.use('/otp', OTPRouter)
 routes.use('/user',authMiddleware, UserRouter)
 routes.use('/driverdoc', DriverDocsRouter)
-// routes.use('/booking', BookingRouter)
+routes.use('/booking', bookingRouter)
 routes.use('/admin', AdminRouter)
 routes.use('/driverotp', DriverOTPRouter)
+routes.use('/auth', driverAuthRouter)
+
 routes.use('/reciever',authMiddleware,ReceiverDetailsRouter)
 routes.use('/bookings',authMiddleware,bookingRouter)
 routes.use('/riderequest',authMiddleware,rideRequestRouter)
@@ -50,6 +59,8 @@ routes.use('/category',CategoryRouter)
 routes.use('/subcategory', SubCategoryRouter)
 routes.use('/supercategory', SuperCategoryRouter)
 routes.use('/brand',BrandRouter)
+
+routes.use('/image',ImageRouter)
 routes.use('/inventory',inventoryRouter)
 routes.use('/images', ImageRouter)
 routes.use('/addresses', AddressRouter)
@@ -58,5 +69,8 @@ routes.use('/cart', cartRouter)
 routes.use('/drivertransactions',driverTransactionRouter)
 routes.use('/vehicle',VehicleRouter)
 
+
 routes.use('/orderitems',OrderItemRouter)
+
+
 export default routes;
