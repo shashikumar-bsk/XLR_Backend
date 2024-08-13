@@ -22,8 +22,9 @@ import BrandRouter from "./brand";
 import inventoryRouter from "./inventory";
 import AddressRouter from "./AddressRoutes";
 import transactionRouter from "./userTransactionRoute";
-import cartRouter from "./add_to_cartRoute";
+ import cartRouter from "./add_to_cartRoute";
 import dishRouter from "./dish";
+import driverAuthRouter from "./driverAuthRouter";
 
 const routes = Router();
 
@@ -35,6 +36,8 @@ routes.use('/driverdoc', DriverDocsRouter)
 routes.use('/booking', bookingRouter)
 routes.use('/admin', AdminRouter)
 routes.use('/driverotp', DriverOTPRouter)
+routes.use('/auth', driverAuthRouter)
+
 routes.use('/reciever',authMiddleware,ReceiverDetailsRouter)
 routes.use('/bookings',authMiddleware,bookingRouter)
 routes.use('/riderequest',authMiddleware,rideRequestRouter)
