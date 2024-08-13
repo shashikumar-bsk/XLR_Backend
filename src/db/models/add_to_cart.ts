@@ -1,4 +1,4 @@
-import { DataTypes, Model, Optional } from 'sequelize';
+                                                import { DataTypes, Model, Optional } from 'sequelize';
 import sequelizeConnection from '../config'; // Update this path as needed
 import User from './users';
 import Promotion from './promotions';
@@ -104,7 +104,7 @@ AddToCart.init({
     timestamps: true,
     paranoid: true,
     sequelize: sequelizeConnection,
-    tableName: 'add_to_cart',
+    tableName: 'cart_items',
     indexes: [
         {
             unique: false,
