@@ -106,7 +106,9 @@ AddToCart.init({
     sequelize: sequelizeConnection,
     tableName: 'cart_items',
 
+
      indexes: [
+
         {
             unique: false,
             name:  'cart_userId_index',
