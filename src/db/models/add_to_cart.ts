@@ -104,7 +104,7 @@ AddToCart.init({
     timestamps: true,
     paranoid: true,
     sequelize: sequelizeConnection,
-    tableName: 'add_to_cart',
+    tableName: 'cart_items',
     indexes: [
         {
             unique: false,
