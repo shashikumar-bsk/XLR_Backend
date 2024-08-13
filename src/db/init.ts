@@ -22,10 +22,13 @@ import Image from './models/image';
 import inventory from './models/inventory';
 import Address from './models/Address';
 import UserTransaction from './models/userTransaction';
-
 import AddToCart from './models/add_to_cart';
 import DriverTransaction from './models/drivertransaction';
 import Vehicle from './models/vehicle';
+import Order from './models/order';
+// import OrderItems from './models/order_items';
+// import Payment from './models/payment';
+
 
 async function init() {
 
@@ -64,19 +67,16 @@ async function init() {
     await inventory.sync({alter: isDev});
     await Product.sync({alter: isDev});
     await Image.sync({alter: isDev});
-    // await Image.sync({ alter: isDev });
-    // await Restaurant.sync({alter: isDev})
-    // await Product.sync({alter: isDev})
-
     await Restaurant.sync({alter: isDev});
     await brand.sync({alter: isDev})
-    
     await Address.sync({alter: isDev});
     await UserTransaction.sync({alter: isDev});
     await AddToCart.sync({alter: isDev});
     await DriverTransaction.sync({alter: isDev});
     await Vehicle.sync({alter: isDev});
-
+    await Order.sync({alter: isDev});
+   // await OrderItems.sync({alter: isDev});
+   // await Payment.sync({alter: isDev})
 }
 
 const dbInit = () => {
