@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import Restaurant from '../db/models/restaurant'; // Adjust the path to your Restaurant model
+import Image from '../db/models/image';
 
 const restaurantRouter = express.Router();
 
@@ -8,6 +9,12 @@ restaurantRouter.post('/', async (req: Request, res: Response) => {
   try {
     const { name, location, phone, rating, opening_time, closing_time, image_id } = req.body;
 
+    if (image_id) {
+      const imageExists = await Image.findByPk(image_id);
+      if (!imageExists) {
+        return res.status(400).json({ error: 'Image ID does not exist' });
+      }
+    }
     // Basic validation
     if (!name || !location) {
       return res.status(400).json({ success: false, error: 'Name and location are required' });
@@ -35,7 +42,12 @@ restaurantRouter.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const restaurant = await Restaurant.findByPk(id);
+    const restaurant = await Restaurant.findByPk(id,{
+  include: [
+        { model: Image, as: 'image' }
+      ],
+      
+    })
 
     if (!restaurant) {
       return res.status(404).send({ message: 'Restaurant not found.' });
@@ -50,8 +62,14 @@ restaurantRouter.get('/:id', async (req: Request, res: Response) => {
 
 // Get all restaurants
 restaurantRouter.get('/', async (req: Request, res: Response) => {
+   const { id } = req.params;
   try {
-    const restaurants = await Restaurant.findAll();
+    const restaurants = await Restaurant.findAll({
+      include: [
+        { model: Image, as: 'image' }
+      ],
+       where: id ? { '$category.category_id$':id } : undefined,
+    });
 
     return res.status(200).send(restaurants);
   } catch (error: any) {

@@ -1,8 +1,13 @@
 import express, { Request, Response } from 'express';
+import Admin from '../db/models/admin';
+import multer from 'multer';
+import multerS3 from 'multer-s3';
+import { S3Client } from '@aws-sdk/client-s3';
+import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import Admin from '../db/models/admin';
 import axios from 'axios';
+
 require('dotenv').config();
 
 const AdminRouter = express.Router();
@@ -11,10 +16,44 @@ const CLIENT_ID = process.env.CLIENT_ID; // Ensure your client ID is set in the 
 const CLIENT_SECRET = process.env.CLIENT_SECRET; // Ensure your client secret is set in the environment variables
 const APP_ID = process.env.APP_ID; // Ensure your app ID is set in the environment variables
 
-// Create a new admin
-AdminRouter.post('/', async (req: Request, res: Response) => {
+dotenv.config();
+
+
+
+// Ensure all environment variables are defined
+if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.BUCKET_REGION || !process.env.BUCKET_NAME) {
+  throw new Error('Missing necessary AWS configuration in .env file');
+}
+
+// Configure AWS S3 using S3Client
+const s3 = new S3Client({
+  region: process.env.BUCKET_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+// Configure multer to use S3
+const upload = multer({
+  storage: multerS3({
+    s3: s3,
+    bucket: process.env.BUCKET_NAME as string,
+    // acl: 'public-read',
+    metadata: (req, file, cb) => {
+      cb(null, { fieldName: file.fieldname });
+    },
+    key: (req, file, cb) => {
+      cb(null, `admin_image/${Date.now()}_${file.originalname}`);
+    },
+  }),
+});
+
+// Create a new admin with admin_image
+AdminRouter.post('/', upload.single('admin_image'), async (req: Request, res: Response) => {
   try {
     const { admin_name, email, password, mobile_number } = req.body;
+    const admin_image = (req.file as any)?.location; // Correctly access the file location
 
     // Validate required fields
     if (!admin_name || !email || !password || !mobile_number) {
@@ -47,7 +86,13 @@ AdminRouter.post('/', async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create admin
-    const createAdmin = await Admin.create({ admin_name, email, password: hashedPassword, mobile_number });
+    const createAdmin = await Admin.create({
+      admin_name,
+      email,
+      password: hashedPassword,
+      mobile_number,
+      admin_image // Include the image URL in the creation
+    });
 
     return res.status(200).send({ message: 'Admin created successfully', data: createAdmin });
   } catch (error: any) {
@@ -55,6 +100,8 @@ AdminRouter.post('/', async (req: Request, res: Response) => {
     return res.status(500).send({ message: `Error in creating admin: ${error.message}` });
   }
 });
+
+
 
 // Admin login
 AdminRouter.post('/login', async (req: Request, res: Response) => {
@@ -119,10 +166,11 @@ AdminRouter.get('/', async (req: Request, res: Response) => {
 });
 
 // Update admin
-AdminRouter.put('/:id', async (req: Request, res: Response) => {
+AdminRouter.patch('/:id', upload.single('admin_image'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { admin_name, email, password, mobile_number } = req.body;
+    const admin_image = (req.file as any)?.location;
 
     const admin = await Admin.findOne({ where: { admin_id: id } });
     if (!admin) {
@@ -162,12 +210,36 @@ AdminRouter.put('/:id', async (req: Request, res: Response) => {
     }
 
     // Update admin
-    await Admin.update({ admin_name, email, password: updatedPassword, mobile_number }, { where: { admin_id: id } });
+    const updateData: any = { admin_name, email, password: updatedPassword, mobile_number };
+    if (admin_image) {
+      updateData.admin_image = admin_image;
+    }
+    await Admin.update(updateData, { where: { admin_id: id } });
 
     return res.status(200).send({ message: 'Admin updated successfully' });
   } catch (error: any) {
     console.error('Error in updating admin:', error);
     return res.status(500).send({ message: `Error in updating admin: ${error.message}` });
+  }
+});
+
+// Delete (soft delete) admin
+AdminRouter.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const admin = await Admin.findOne({ where: { admin_id: id } });
+    if (!admin) {
+      return res.status(404).send({ message: 'Admin not found.' });
+    }
+
+    // Soft delete admin
+    await Admin.destroy({ where: { admin_id: id } });
+
+    return res.status(200).send({ message: 'Admin deleted successfully' });
+  } catch (error: any) {
+    console.error('Error in deleting admin:', error);
+    return res.status(500).send({ message: `Error in deleting admin: ${error.message}` });
   }
 });
 
@@ -311,7 +383,7 @@ AdminRouter.patch('/reset-password', async (req: Request, res: Response) => {
 //     const otpTimestamp = new Date(admin.otp_timestamp).getTime();
 //     const timeDifference = currentTime - otpTimestamp;
 
-//     if (timeDifference > 2 *  60 * 1000) { // 2 minutes in milliseconds
+//     if (timeDifference > 2   60  1000) { // 2 minutes in milliseconds
 //       return res.status(400).send({ message: 'OTP has expired.' });
 //     }
 
@@ -338,6 +410,7 @@ AdminRouter.patch('/reset-password', async (req: Request, res: Response) => {
 AdminRouter.post('/send-otp', async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
+    console.log(email);
 
     // Validate email
     if (!email) {
@@ -444,5 +517,23 @@ AdminRouter.post('/verify-otp', async (req: Request, res: Response) => {
       error: `Failed to verify OTP: ${error.response?.data?.message || error.message}`
     });
   }
+  // Get admin by ID
+AdminRouter.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const admin = await Admin.findOne({ where: { admin_id: id } });
+
+    if (!admin) {
+      return res.status(404).send({ message: 'Admin not found.' });
+    }
+
+    return res.status(200).send(admin);
+  } catch (error: any) {
+    console.error('Error in fetching admin by ID:', error);
+    return res.status(500).send({ message: `Error in fetching admin: ${error.message}` });
+  }
+});
+
 });
 export default AdminRouter;

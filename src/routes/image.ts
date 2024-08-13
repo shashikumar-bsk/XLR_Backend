@@ -8,6 +8,7 @@ import Product from '../db/models/product';
 import Category from '../db/models/Category';
 import SubCategory from '../db/models/SubCategory';
 import Brand from '../db/models/brand';
+import Restaurant from '../db/models/restaurant';
 
 dotenv.config();
 
@@ -92,7 +93,7 @@ ImageRouter.post('/upload', upload.single('image'), async (req: Request, res: Re
     }
 
     if (entity_type === 'restaurant') {
-      const restaurantExists = await Brand.findByPk(entity_id);
+      const restaurantExists = await Restaurant.findByPk(entity_id);
       if (!restaurantExists) {
         return res.status(404).json({ success: false, error: 'restaurant not found' });
       }
