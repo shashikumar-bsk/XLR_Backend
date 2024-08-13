@@ -58,6 +58,26 @@ dishRouter.get('/', async (req: Request, res: Response) => {
     return res.status(500).send({ message: `Error in fetching dishes: ${error.message}` });
   }
 });
+// Get all dishes by restaurant_id
+dishRouter.get('/restaurant/:restaurant_id', async (req: Request, res: Response) => {
+  try {
+    const { restaurant_id } = req.params;
+
+    const dishes = await Dish.findAll({
+      where: { restaurant_id },
+      include: [{ model: Image, as: 'image' }],
+    });
+
+    if (dishes.length === 0) {
+      return res.status(404).send({ message: 'No dishes found for this restaurant.' });
+    }
+
+    return res.status(200).send(dishes.map(transformDishOutput));
+  } catch (error: any) {
+    console.error('Error in fetching dishes by restaurant ID:', error);
+    return res.status(500).send({ message: `Error in fetching dishes: ${error.message}` });
+  }
+});
 
 // Update dish
 dishRouter.patch('/:id', async (req: Request, res: Response) => {
@@ -103,20 +123,37 @@ dishRouter.delete('/:id', async (req: Request, res: Response) => {
 });
 
 // Helper function to transform the dish output
+// function transformDishOutput(dish: any) {
+//   if (!dish) return null;
+//   const { id, restaurant_id, name, description, price, image_id, createdAt, updatedAt } = dish;
+//   return {
+//     id,
+//     restaurant_id,
+//     name,
+//     description,
+//     price,
+//     image_id,
+//     createdAt,
+//     updatedAt,
+//     Image: image_id.toString() // Transform the Image field to just image_id as a string
+//   };
+// }
 function transformDishOutput(dish: any) {
+  // console.log(dish); // Log the entire dish object
   if (!dish) return null;
-  const { id, restaurant_id, name, description, price, image_id, createdAt, updatedAt } = dish;
+  const { id, restaurant_id, name, description, price, createdAt, updatedAt, image } = dish;
+
   return {
     id,
     restaurant_id,
     name,
     description,
     price,
-    image_id,
     createdAt,
     updatedAt,
-    Image: image_id.toString() // Transform the Image field to just image_id as a string
+    imageUrl: image ? image.image_url : null,
   };
 }
+
 
 export default dishRouter;
