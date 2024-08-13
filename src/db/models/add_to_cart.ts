@@ -104,11 +104,11 @@ AddToCart.init({
     timestamps: true,
     paranoid: true,
     sequelize: sequelizeConnection,
-    tableName: 'add_to_cart',
-    indexes: [
+    tableName: 'cart_items',
+     indexes: [
         {
             unique: false,
-            name: 'cart_userId_index',
+            name:  'cart_userId_index',
             fields: ['user_id']
         }
     ]
