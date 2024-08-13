@@ -70,5 +70,8 @@ SubCategory.init({
         }
     ]
 });
+SubCategory.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
+
+SubCategory.belongsTo(Image, { foreignKey: 'image_id', as: 'image' });
 
 export default SubCategory;
