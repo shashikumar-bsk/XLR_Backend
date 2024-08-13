@@ -27,6 +27,8 @@ import DriverTransaction from "../db/models/drivertransaction";
 import driverTransactionRouter from "./drivertransaction";
 import VehicleRouter from "./VehicleRouter";
 
+import OrderItemRouter from "./order_items";
+
 const routes = Router();
 
 
@@ -55,4 +57,6 @@ routes.use('/transactions', transactionRouter)
 routes.use('/cart', cartRouter)
 routes.use('/drivertransactions',driverTransactionRouter)
 routes.use('/vehicle',VehicleRouter)
+
+routes.use('/orderitems',OrderItemRouter)
 export default routes;

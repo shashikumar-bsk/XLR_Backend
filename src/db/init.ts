@@ -27,6 +27,8 @@ import AddToCart from './models/add_to_cart';
 import DriverTransaction from './models/drivertransaction';
 import Vehicle from './models/vehicle';
 
+import OrderItem from './models/order_items';
+
 async function init() {
 
     const isDev = false
@@ -76,7 +78,7 @@ async function init() {
     await AddToCart.sync({alter: isDev});
     await DriverTransaction.sync({alter: isDev});
     await Vehicle.sync({alter: isDev});
-
+        await OrderItem.sync({alter: isDev})
 }
 
 const dbInit = () => {
