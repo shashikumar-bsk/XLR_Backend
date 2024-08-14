@@ -70,7 +70,14 @@ User.init({
 }, {
     timestamps: true,
     sequelize: sequelizeConnection,
-    tableName: 'User_tbl'
+    tableName: 'User_tbl',
+    indexes: [
+        {
+            unique: true,
+            name: 'userId_index',
+            fields: ['id']
+        }
+    ]
 });
 
 export default User;

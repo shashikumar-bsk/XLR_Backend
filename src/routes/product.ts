@@ -1,39 +1,49 @@
-//productRoute.ts
+
 import express, { Request, Response, NextFunction } from 'express';
 import Product from '../db/models/product'; // Adjust the path to your Product model
 import SubCategory from '../db/models/SubCategory';
 import Brand from '../db/models/brand';
 import Image from '../db/models/image';
+
 const productRouter = express.Router();
 
 // Create a new product
 productRouter.post('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { sub_category_id, brand_id, image_id, name, description, price, discount_price, is_available } = req.body;
+        const { sub_category_id, brand_id, image_id, name, description,quantity, price, discount_price, is_available } = req.body;
+        
+        // Validate SubCategory ID
         if (sub_category_id) {
-            const subCategoryExists = await Image.findByPk(sub_category_id);
+            const subCategoryExists = await SubCategory.findByPk(sub_category_id);
             if (!subCategoryExists) {
                 return res.status(400).json({ error: 'SubCategory ID does not exist' });
             }
         }
+
+        // Validate Brand ID
         if (brand_id) {
-            const brandExists = await Image.findByPk(brand_id);
+            const brandExists = await Brand.findByPk(brand_id);
             if (!brandExists) {
                 return res.status(400).json({ error: 'Brand ID does not exist' });
             }
         }
+
+        // Validate Image ID
         if (image_id) {
             const imageExists = await Image.findByPk(image_id);
             if (!imageExists) {
                 return res.status(400).json({ error: 'Image ID does not exist' });
             }
         }
+
+        // Create new product
         const newProduct = await Product.create({
             sub_category_id,
             brand_id,
             image_id,
             name,
             description,
+            quantity,
             price,
             discount_price,
             is_available
@@ -45,10 +55,19 @@ productRouter.post('/', async (req: Request, res: Response, next: NextFunction) 
     }
 });
 
-// Get all products
+// Get all products with optional category filter
 productRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
+    const { sub_category_id} = req.query;
+
     try {
-        const products = await Product.findAll();
+        const products = await Product.findAll({
+            include: [
+                { model: SubCategory, as: 'subCategory' },
+                { model: Brand, as: 'brand' },
+                { model: Image, as: 'image' }
+            ],
+            where: sub_category_id ? { '$subCategory.sub_category_id$': sub_category_id } : undefined // Only apply filter if categoryId is provided
+        });
         res.status(200).json(products);
     } catch (error) {
         next(error);
@@ -59,7 +78,13 @@ productRouter.get('/', async (req: Request, res: Response, next: NextFunction) =
 productRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
-        const product = await Product.findByPk(id);
+        const product = await Product.findByPk(id, {
+            include: [
+                { model: SubCategory, as: 'subCategory' },
+                { model: Brand, as: 'brand' },
+                { model: Image, as: 'image' }
+            ]
+        });
 
         if (product) {
             res.status(200).json(product);
@@ -75,7 +100,27 @@ productRouter.get('/:id', async (req: Request, res: Response, next: NextFunction
 productRouter.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
-        const { sub_category_id, brand_id, image_id, name, description, price, discount_price, is_available } = req.body;
+        const { sub_category_id, brand_id, image_id, name, description,quantity, price, discount_price, is_available } = req.body;
+
+        // Validate existence of related entities
+        if (sub_category_id) {
+            const subCategoryExists = await SubCategory.findByPk(sub_category_id);
+            if (!subCategoryExists) {
+                return res.status(400).json({ error: 'SubCategory ID does not exist' });
+            }
+        }
+        if (brand_id) {
+            const brandExists = await Brand.findByPk(brand_id);
+            if (!brandExists) {
+                return res.status(400).json({ error: 'Brand ID does not exist' });
+            }
+        }
+        if (image_id) {
+            const imageExists = await Image.findByPk(image_id);
+            if (!imageExists) {
+                return res.status(400).json({ error: 'Image ID does not exist' });
+            }
+        }
 
         const [updated] = await Product.update({
             sub_category_id,
@@ -83,6 +128,7 @@ productRouter.put('/:id', async (req: Request, res: Response, next: NextFunction
             image_id,
             name,
             description,
+            quantity,
             price,
             discount_price,
             is_available

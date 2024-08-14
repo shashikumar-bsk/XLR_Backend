@@ -1,16 +1,59 @@
 import express, { Request, Response } from 'express';
+import Admin from '../db/models/admin';
+import multer from 'multer';
+import multerS3 from 'multer-s3';
+import { S3Client } from '@aws-sdk/client-s3';
+import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import Admin from '../db/models/admin';
 import axios from 'axios';
+
 require('dotenv').config();
 
 const AdminRouter = express.Router();
 const API_KEY = process.env.API_KEY;
-// Create a new admin
-AdminRouter.post('/', async (req: Request, res: Response) => {
+const CLIENT_ID = process.env.CLIENT_ID; // Ensure your client ID is set in the environment variables
+const CLIENT_SECRET = process.env.CLIENT_SECRET; // Ensure your client secret is set in the environment variables
+const APP_ID = process.env.APP_ID; // Ensure your app ID is set in the environment variables
+
+dotenv.config();
+
+
+
+// Ensure all environment variables are defined
+if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.BUCKET_REGION || !process.env.BUCKET_NAME) {
+  throw new Error('Missing necessary AWS configuration in .env file');
+}
+
+// Configure AWS S3 using S3Client
+const s3 = new S3Client({
+  region: process.env.BUCKET_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+// Configure multer to use S3
+const upload = multer({
+  storage: multerS3({
+    s3: s3,
+    bucket: process.env.BUCKET_NAME as string,
+    // acl: 'public-read',
+    metadata: (req, file, cb) => {
+      cb(null, { fieldName: file.fieldname });
+    },
+    key: (req, file, cb) => {
+      cb(null, `admin_image/${Date.now()}_${file.originalname}`);
+    },
+  }),
+});
+
+// Create a new admin with admin_image
+AdminRouter.post('/', upload.single('admin_image'), async (req: Request, res: Response) => {
   try {
     const { admin_name, email, password, mobile_number } = req.body;
+    const admin_image = (req.file as any)?.location; // Correctly access the file location
 
     // Validate required fields
     if (!admin_name || !email || !password || !mobile_number) {
@@ -43,7 +86,13 @@ AdminRouter.post('/', async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create admin
-    const createAdmin = await Admin.create({ admin_name, email, password: hashedPassword, mobile_number });
+    const createAdmin = await Admin.create({
+      admin_name,
+      email,
+      password: hashedPassword,
+      mobile_number,
+      admin_image // Include the image URL in the creation
+    });
 
     return res.status(200).send({ message: 'Admin created successfully', data: createAdmin });
   } catch (error: any) {
@@ -51,6 +100,8 @@ AdminRouter.post('/', async (req: Request, res: Response) => {
     return res.status(500).send({ message: `Error in creating admin: ${error.message}` });
   }
 });
+
+
 
 // Admin login
 AdminRouter.post('/login', async (req: Request, res: Response) => {
@@ -115,10 +166,11 @@ AdminRouter.get('/', async (req: Request, res: Response) => {
 });
 
 // Update admin
-AdminRouter.put('/:id', async (req: Request, res: Response) => {
+AdminRouter.patch('/:id', upload.single('admin_image'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { admin_name, email, password, mobile_number } = req.body;
+    const admin_image = (req.file as any)?.location;
 
     const admin = await Admin.findOne({ where: { admin_id: id } });
     if (!admin) {
@@ -158,7 +210,11 @@ AdminRouter.put('/:id', async (req: Request, res: Response) => {
     }
 
     // Update admin
-    await Admin.update({ admin_name, email, password: updatedPassword, mobile_number }, { where: { admin_id: id } });
+    const updateData: any = { admin_name, email, password: updatedPassword, mobile_number };
+    if (admin_image) {
+      updateData.admin_image = admin_image;
+    }
+    await Admin.update(updateData, { where: { admin_id: id } });
 
     return res.status(200).send({ message: 'Admin updated successfully' });
   } catch (error: any) {
@@ -187,8 +243,28 @@ AdminRouter.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Reset password
-AdminRouter.patch('/reset-password', async (req: Request, res: Response) => {
+// Delete (soft delete) admin
+AdminRouter.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const admin = await Admin.findOne({ where: { admin_id: id } });
+    if (!admin) {
+      return res.status(404).send({ message: 'Admin not found.' });
+    }
+
+    // Soft delete admin
+    await Admin.destroy({ where: { admin_id: id } });
+
+    return res.status(200).send({ message: 'Admin deleted successfully' });
+  } catch (error: any) {
+    console.error('Error in deleting admin:', error);
+    return res.status(500).send({ message: `Error in deleting admin: ${error.message}` });
+  }
+});
+
+/// Reset password
+AdminRouter.patch('/reset-password/password', async (req: Request, res: Response) => {
   try {
     const { email, newPassword } = req.body;
     console.log(req.body);
@@ -213,10 +289,9 @@ AdminRouter.patch('/reset-password', async (req: Request, res: Response) => {
     return res.status(200).send({ message: 'Password reset successfully' });
   } catch (error: any) {
     console.error('Error in resetting password:', error);
-    return res.status(500).send({ message: `Error in resetting password: ${error.message}` });
+    return res.status(500).send({ message: `Error in resetting password:" ${error.message}` });
   }
 });
-
 // // Check if email exists
 // AdminRouter.post('/check-email', async (req: Request, res: Response) => {
 //   try {
@@ -249,85 +324,216 @@ AdminRouter.patch('/reset-password', async (req: Request, res: Response) => {
 
 
 // Send OTP
+// AdminRouter.post('/send-otp', async (req: Request, res: Response) => {
+//   try {
+//     const { email } = req.body;
+
+//    // Validate email
+//     if (!email) {
+//       return res.status(400).send({ message: 'Email is required.' });
+//     }
+
+//     // Check if admin with the email exists
+//     const admin = await Admin.findOne({ where: { email } });
+//     if (!admin) {
+//       return res.status(404).send({ message: 'Admin not found.' });
+//     }
+
+//     // Send OTP
+//     const response = await axios.get(`https://2factor.in/API/V1/${API_KEY}/SMS/${admin.mobile_number}/AUTOGEN3/OTP1`);
+//     console.log(response)
+//     if (response.data.Status !== 'Success') {
+//       return res.status(500).send({ message: 'Failed to send OTP.' });
+//     }
+
+//     // Save session ID and timestamp
+//     await Admin.update(
+//       { otp_session_id: response.data.Details, otp_timestamp: new Date() },
+//       { where: { email } }
+//     );
+
+//     return res.status(200).send({ message: 'OTP sent successfully.', sessionId: response.data.Details });
+//   } catch (error: any) {
+//     console.error('Error in sending OTP:', error);
+//     return res.status(500).send({ message: `Error in sending OTP: ${error.message}` });
+//   }
+// });
+
+
+
+// // Verify OTP
+// AdminRouter.post('/verify-otp', async (req: Request, res: Response) => {
+//   try {
+//     const { email, otp } = req.body;
+
+//     // Validate email and otp
+//     if (!email || !otp) {
+//       return res.status(400).send({ message: 'Email and OTP are required.' });
+//     }
+
+//     // Find admin by email
+//     const admin = await Admin.findOne({ where: { email } });
+//     if (!admin || !admin.otp_session_id || !admin.otp_timestamp) {
+//       return res.status(400).send({ message: 'Invalid request.' });
+//     }
+
+//     // Check if OTP is within the valid time window (2 minutes)
+//     const currentTime = new Date().getTime();
+//     const otpTimestamp = new Date(admin.otp_timestamp).getTime();
+//     const timeDifference = currentTime - otpTimestamp;
+
+//     if (timeDifference > 2   60  1000) { // 2 minutes in milliseconds
+//       return res.status(400).send({ message: 'OTP has expired.' });
+//     }
+
+//     // Verify OTP
+//     const response = await axios.get(`https://2factor.in/API/V1/${API_KEY}/SMS/VERIFY3/${admin.mobile_number}/${otp}`);
+
+//     if (response.data.Status !== 'Success') {
+//       return res.status(400).send({ message: 'Invalid OTP.' });
+//     }
+
+//     // Clear OTP session ID and timestamp on successful verification
+//     await Admin.update(
+//       { otp_session_id: null, otp_timestamp: null },
+//       { where: { email } }
+//     );
+
+//     return res.status(200).send({ message: 'OTP verified successfully.' });
+//   } catch (error: any) {
+//     console.error('Error in verifying OTP:', error);
+//     return res.status(500).send({ message: `Error in verifying OTP: ${error.message}` });
+//   }
+// });
+//send-otp(whatsapp code)
 AdminRouter.post('/send-otp', async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
+    console.log(email);
 
-   // Validate email
+    // Validate email
     if (!email) {
-      return res.status(400).send({ message: 'Email is required.' });
+      return res.status(400).json({ error: 'Email is required.' });
     }
 
     // Check if admin with the email exists
     const admin = await Admin.findOne({ where: { email } });
     if (!admin) {
-      return res.status(404).send({ message: 'Admin not found.' });
+      return res.status(404).json({ error: 'Admin not found.' });
     }
+
 
     // Send OTP
-    const response = await axios.get(`https://2factor.in/API/V1/${API_KEY}/SMS/${admin.mobile_number}/AUTOGEN3/OTP1`);
-    console.log(response)
-    if (response.data.Status !== 'Success') {
-      return res.status(500).send({ message: 'Failed to send OTP.' });
+    const response = await axios.post('https://auth.otpless.app/auth/otp/v1/send', {
+      phoneNumber:91+admin.mobile_number,
+      otpLength: 4,
+      channel: 'WHATSAPP',
+      expiry: 600
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'clientId': CLIENT_ID,
+        'clientSecret': CLIENT_SECRET,
+        'appId': APP_ID
+      }
+    });
+
+    console.log('OTP send response:', response.data); // Log the full response for debugging
+
+    if (response.data.orderId) { // Check if orderId is present
+      // Save OTP orderId to database if needed
+      await Admin.update(
+        { otp_session_id: response.data.orderId, otp_timestamp: new Date() },
+        { where: { email } }
+      );
+
+      res.json({ message: 'OTP sent successfully', orderId: response.data.orderId });
+    } else {
+      throw new Error(`Failed to send OTP: ${response.data.message || 'Unknown error'}`);
     }
-
-    // Save session ID and timestamp
-    await Admin.update(
-      { otp_session_id: response.data.Details, otp_timestamp: new Date() },
-      { where: { email } }
-    );
-
-    return res.status(200).send({ message: 'OTP sent successfully.', sessionId: response.data.Details });
   } catch (error: any) {
-    console.error('Error in sending OTP:', error);
-    return res.status(500).send({ message: `Error in sending OTP: ${error.message}` });
+    console.error('Error sending OTP:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: `Failed to send OTP: ${error.response?.data?.message || error.message}`
+    });
   }
 });
 
 
-
-// Verify OTP
 AdminRouter.post('/verify-otp', async (req: Request, res: Response) => {
+  const { email, otp, orderId } = req.body;
+
+  if (!email || !otp || !orderId) {
+    return res.status(400).json({ error: 'Email, OTP, and orderId are required' });
+  }
+
   try {
-    const { email, otp } = req.body;
-
-    // Validate email and otp
-    if (!email || !otp) {
-      return res.status(400).send({ message: 'Email and OTP are required.' });
-    }
-
-    // Find admin by email
+    // Check if admin with the email exists
     const admin = await Admin.findOne({ where: { email } });
     if (!admin || !admin.otp_session_id || !admin.otp_timestamp) {
-      return res.status(400).send({ message: 'Invalid request.' });
+      return res.status(400).json({ error: 'Invalid request. OTP was not sent or has expired.' });
     }
 
-    // Check if OTP is within the valid time window (2 minutes)
+    // Check if OTP is within the valid time window (10 minutes)
     const currentTime = new Date().getTime();
     const otpTimestamp = new Date(admin.otp_timestamp).getTime();
     const timeDifference = currentTime - otpTimestamp;
 
-    if (timeDifference > 2 *  60 * 1000) { // 2 minutes in milliseconds
-      return res.status(400).send({ message: 'OTP has expired.' });
+    if (timeDifference > 10 * 60 * 1000) { // 10 minutes in milliseconds
+      return res.status(400).json({ error: 'OTP has expired' });
     }
 
     // Verify OTP
-    const response = await axios.get(`https://2factor.in/API/V1/${API_KEY}/SMS/VERIFY3/${admin.mobile_number}/${otp}`);
+    const response = await axios.post('https://auth.otpless.app/auth/otp/v1/verify', {
+      phoneNumber: '91' + admin.mobile_number, // Assuming phone number with country code
+      otp,
+      orderId
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'clientId': CLIENT_ID,
+        'clientSecret': CLIENT_SECRET,
+        'appId': APP_ID
+      }
+    });
 
-    if (response.data.Status !== 'Success') {
-      return res.status(400).send({ message: 'Invalid OTP.' });
+    console.log('OTP verify response:', response.data);
+
+    if (response.data.isOTPVerified) {
+      // Clear OTP session ID and timestamp on successful verification
+      await Admin.update(
+        { otp_session_id: null, otp_timestamp: null },
+        { where: { email } }
+      );
+
+      res.json({ message: 'OTP Verified Successfully!' });
+    } else {
+      res.status(400).json({ error: 'Invalid OTP or phone number' });
+    }
+  } catch (error: any) {
+    console.error('Error verifying OTP:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      error: `Failed to verify OTP: ${error.response?.data?.message || error.message}`
+    });
+  }
+  // Get admin by ID
+AdminRouter.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const admin = await Admin.findOne({ where: { admin_id: id } });
+
+    if (!admin) {
+      return res.status(404).send({ message: 'Admin not found.' });
     }
 
-    // Clear OTP session ID and timestamp on successful verification
-    await Admin.update(
-      { otp_session_id: null, otp_timestamp: null },
-      { where: { email } }
-    );
-
-    return res.status(200).send({ message: 'OTP verified successfully.' });
+    return res.status(200).send(admin);
   } catch (error: any) {
-    console.error('Error in verifying OTP:', error);
-    return res.status(500).send({ message: `Error in verifying OTP: ${error.message}` });
+    console.error('Error in fetching admin by ID:', error);
+    return res.status(500).send({ message: `Error in fetching admin: ${error.message}` });
   }
 });
+
+});
+
 export default AdminRouter;

@@ -1,35 +1,37 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config'; // Adjust the path as needed
-import User from './users';
+import Driver from './driver'; // Adjust the path to the driver model
+import RideRequest from './riderequest'; // Adjust the path to the rideRequest model
 
-// Define attributes for the Transaction model
-interface TransactionAttributes {
+// Define attributes for the DriverTransaction model
+interface DriverTransactionAttributes {
     transaction_id: number;
-    user_id: number;
+    driver_id: number;
+    request_id?: number; // Optional foreign key for ride request
     wallet_balance_before: number;
     wallet_balance_after: number;
     amount: number;
     transaction_type: string; // TypeScript type constraint
     description?: string;
-    reference_id?: string;
     transaction_date: Date;
     createdAt?: Date;
     updatedAt?: Date;
 }
 
-export interface userTransactionInput extends Optional<TransactionAttributes, 'transaction_id'> {}
-export interface userTransactionOutput extends Required<TransactionAttributes> {}
+export interface DriverTransactionInput extends Optional<DriverTransactionAttributes, 'transaction_id'> {}
+export interface DriverTransactionOutput extends Required<DriverTransactionAttributes> {}
 
-// Define the Transaction model
-class Transaction extends Model<TransactionAttributes, userTransactionInput> implements TransactionAttributes {
+// Define the DriverTransaction model
+class DriverTransaction extends Model<DriverTransactionAttributes, DriverTransactionInput> implements DriverTransactionAttributes {
     public transaction_id!: number;
-    public user_id!: number;
+    public driver_id!: number;
+    public request_id?: number; // Optional foreign key
     public wallet_balance_before!: number;
     public wallet_balance_after!: number;
     public amount!: number;
     public transaction_type!: string; // TypeScript type constraint
     public description?: string;
-    public reference_id?: string;
+  
     public transaction_date!: Date;
 
     // Timestamps
@@ -38,19 +40,27 @@ class Transaction extends Model<TransactionAttributes, userTransactionInput> imp
 }
 
 // Initialize the model
-Transaction.init(
+DriverTransaction.init(
     {
         transaction_id: {
             type: DataTypes.INTEGER,
             autoIncrement: true,
             primaryKey: true,
         },
-        user_id: {
+        driver_id: {
             type: DataTypes.INTEGER,
             allowNull: true,
             references: {
-                model: User, // Make sure the table name is correct
-                key: 'id'
+                model: Driver, // Make sure the table name is correct
+                key: 'driver_id'
+            }
+        },
+        request_id: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: RideRequest, // Make sure the table name is correct
+                key: 'request_id'
             }
         },
         wallet_balance_before: {
@@ -76,10 +86,8 @@ Transaction.init(
             type: DataTypes.STRING,
             allowNull: true,
         },
-        reference_id: {
-            type: DataTypes.STRING,
-            allowNull: true,
-        },
+       
+        
         transaction_date: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -88,16 +96,9 @@ Transaction.init(
     },
     {
         sequelize,
-        tableName: 'userTransactions',
+        tableName: 'driverTransactions',
         timestamps: true,
-        indexes: [
-            {
-                unique: false,
-                name: 'transactionUserId_index',
-                fields: ['user_id']
-            }
-        ]
     }
 );
 
-export default Transaction;
+export default DriverTransaction;

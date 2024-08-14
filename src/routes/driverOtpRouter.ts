@@ -1,78 +1,112 @@
 import express, { Request, Response } from 'express';
 import Driver from '../db/models/driver';
-// import OTP from '../db/models/Otpmodel';
 import axios from 'axios';
-
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
 
 dotenv.config();
 const DriverOTPRouter = express.Router();
 
-const api_key=process.env.API_KEY
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+const APP_ID = process.env.APP_ID;
+const JWT_SECRET = process.env.JWT_SECRET;
 
-// Generate and send OTP
+if (!CLIENT_ID || !CLIENT_SECRET || !APP_ID || !JWT_SECRET) {
+  throw new Error('CLIENT_ID, CLIENT_SECRET, APP_ID, or JWT_SECRET is not defined in environment variables');
+}
+
+// Temporary storage for demonstration purposes
+const otpStorage: { [key: string]: { phone: string; orderId: string } } = {};
+
 DriverOTPRouter.post('/send-otp', async (req: Request, res: Response) => {
   const { phone } = req.body;
-  console.log(phone,req.body)
 
   if (!phone) {
     return res.status(400).json({ error: 'Phone number is required' });
   }
 
+  const sanitizedPhone = phone.replace(/\D/g, '');
+
   try {
-    // Check if the driver exists and is active
-    // const driver = await Driver.findOne({ where: { phone, is_deleted: false } });
+    const response = await axios.post('https://auth.otpless.app/auth/otp/v1/send', {
+      phoneNumber: sanitizedPhone,
+      otpLength: 4,
+      channel: 'WHATSAPP',
+      expiry: 600,
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'clientId': CLIENT_ID,
+        'clientSecret': CLIENT_SECRET,
+        'appId': APP_ID,
+      }
+    });
 
-    // console.log(driver)
+    if (response.data.orderId) {
+      // Store phone and orderId
+      otpStorage[sanitizedPhone] = { phone: sanitizedPhone, orderId: response.data.orderId };
 
-    // if (!driver) {
-    //   return res.status(404).json({ error: 'Driver not found or inactive' });
-    // }
-
-    // Send OTP using 2Factor.in API
-    const response = await axios.get(
-
-      `https://2factor.in/API/V1/${api_key}/SMS/${phone}/AUTOGEN3/OTP1`
-
-    );
-
-    if (response.data.Status === 'Success') {
       res.json({ message: 'OTP sent successfully' });
     } else {
-      throw new Error('Failed to send OTP');
+      throw new Error(`Failed to send OTP: ${response.data.message || 'Unknown error'}`);
     }
-  } catch (error) {
-    console.error('Error sending OTP:', error);
-    res.status(500).json({ error: 'Failed to send OTP' });
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json({
+      error: `Failed to send OTP: ${error.response?.data?.message || error.message}`,
+    });
   }
 });
 
-// Verify OTP
 DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
-  const { phone, otp } = req.body;
+  const { otp } = req.body;
 
-  if (!phone || !otp) {
-    return res.status(400).json({ error: 'Phone number and OTP are required' });
-  }
+  // Assuming phone is known from the session or other storage
+  const phone = Object.keys(otpStorage)[0]; // In production, use a better method to retrieve the correct phone number
+  const { orderId } = otpStorage[phone];
 
   try {
-    const response = await axios.get(
+    const response = await axios.post('https://auth.otpless.app/auth/otp/v1/verify', {
+      phoneNumber: phone,
+      otp,
+      orderId,
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'clientId': CLIENT_ID,
+        'clientSecret': CLIENT_SECRET,
+        'appId': APP_ID,
+      }
+    });
 
-      `https://2factor.in/API/V1/${api_key}/SMS/VERIFY3/${phone}/${otp}`
+    if (response.data.isOTPVerified) {
+      const driver = await Driver.findOne({ where: { phone, is_deleted: false } });
 
-    );
+      if (driver) {
+        const token = jwt.sign(
+          { id: driver.id, phone },
+          JWT_SECRET,
+          { expiresIn: '1h' }
+        );
+        console.log('Generated JWT Token:', token); // Ensure this is in the correct scope
 
-    if (response.data.Status === 'Success') {
-      res.json({ message: 'OTP Verified Successfully!' });
+    // res.json({ message: 'OTP Verified Successfully!', token });
+
+        res.json({ message: 'OTP Verified Successfully!', token });
+      } else {
+        res.status(404).json({ error: 'Driver not found or inactive' });
+      }
     } else {
-      res.status(400).json({ message: 'Invalid OTP' });
+      res.status(400).json({ error: 'Invalid OTP' });
     }
-  } catch (error) {
-    console.error('Error verifying OTP:', error);
-    res.status(500).json({ error: 'Failed to verify OTP' });
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json({
+      error: `Failed to verify OTP: ${error.response?.data?.message || error.message}`,
+    });
   }
 });
-// Fetch driver details by phone number
+
+
 DriverOTPRouter.get('/check-driver', async (req: Request, res: Response) => {
   const phone = req.query.phone as string; // Ensure phoneNumber is treated as a string
 

@@ -67,6 +67,13 @@ Image.init({
   sequelize: sequelizeConnection,
   tableName: 'images',
   timestamps: true,
+  indexes: [
+    {
+        unique: true,
+        name: 'imageId_index',
+        fields: ['image_id']
+    }
+]
 });
 
 export default Image;

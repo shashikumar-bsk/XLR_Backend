@@ -98,7 +98,14 @@ Driver.init({
 },{
     timestamps: true,
     sequelize: sequelizeConnection,
-    tableName: 'driver_tbl'
+    tableName: 'driver_tbl',
+    indexes: [
+        {
+            unique: true,
+            name: 'driverId_index',
+            fields: ['driver_id']
+        }
+    ]
 });
 
 export default Driver;

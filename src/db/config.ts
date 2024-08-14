@@ -1,5 +1,6 @@
 import { Dialect, Sequelize } from 'sequelize';
-require('dotenv').config();
+import dotenv from 'dotenv'
+dotenv.config();
 
 
 const dbHost = process.env.RDS_HOSTNAME;
@@ -10,6 +11,7 @@ const dbDriver = process.env.DB_DRIVER as Dialect;
 const dbPassword = process.env.RDS_PASSWORD as string;
 
 function getConnection() {
+    console.log(dbHost)
     if (!dbHost || !dbPort || !dbName || !dbUser || !dbDriver || !dbPassword) {
         throw new Error('Missing required database environment variables');
     }

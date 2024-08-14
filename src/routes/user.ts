@@ -6,10 +6,10 @@ const UserRouter = express.Router();
 // Create a new user
 UserRouter.post("/", async (req: Request, res: Response) => {
   try {
-    const { firstname, lastname, email, phone, gender, password } = req.body;
+    const { firstname, lastname, email, phone_number, gender, password } = req.body;
 
     // Validate required fields
-    if (!firstname || !lastname || !email || !phone || !password) {
+    if (!firstname || !lastname || !email || !phone_number || !password) {
       return res.status(400).send({ message: "Please fill in all required fields." });
     }
 
@@ -22,12 +22,15 @@ UserRouter.post("/", async (req: Request, res: Response) => {
     }
 
     // Validate mobile number format
-    if (!/^\d+$/.test(phone)) {
+    if (!/^\d+$/.test(phone_number)) {
       return res.status(400).send({ message: "Please enter a valid mobile number." });
     }
 
+    // Convert gender to uppercase
+    const genderUpperCase = gender?.toUpperCase();
+
     // Validate gender (optional)
-    if (gender && !['M', 'F', 'Other'].includes(gender)) {
+    if (genderUpperCase && !['M', 'F', 'OTHER'].includes(genderUpperCase)) {
       return res.status(400).send({ message: "Please enter a valid gender." });
     }
 
@@ -42,8 +45,8 @@ UserRouter.post("/", async (req: Request, res: Response) => {
     const createUserObject: any = {
       username,
       email,
-      phone,
-      gender,
+      phone_number,
+      gender: genderUpperCase,  // Store gender in uppercase
       password
     };
 
@@ -104,12 +107,15 @@ UserRouter.patch("/:id", async (req: Request, res: Response) => {
     // Concatenate firstname and lastname to form username
     const username = `${firstname} ${lastname}`;
 
+    // Convert gender to uppercase
+    const genderUpperCase = gender?.toUpperCase();
+
     // Update user object
     const updateUserObject: any = {
       username,
       email,
       mobile_number,
-      gender,
+      gender: genderUpperCase,  // Store gender in uppercase
       password
     };
 
@@ -122,7 +128,6 @@ UserRouter.patch("/:id", async (req: Request, res: Response) => {
     return res.status(500).send({ message: `Error in updating user: ${error.message}` });
   }
 });
-
 
 // Soft delete user (set is_deleted to true)
 UserRouter.delete("/:id", async (req: Request, res: Response) => {
@@ -145,23 +150,11 @@ UserRouter.delete("/:id", async (req: Request, res: Response) => {
   }
 });
 
-// Get all users irrespective of active status
-// UserRouter.get("/users/all", async (req: Request, res: Response) => {
-//   try {
-//     const users = await User.findAll();
-//     return res.status(200).send(users);
-//   } catch (error: any) {
-//     console.error("Error in fetching all users:", error);
-//     return res.status(500).send({ message: `Error in fetching all users: ${error.message}` });
-//   }
-// });
-
 // Update user's active status
 UserRouter.patch("/:id/active", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { active } = req.body;
-    console.log(req.body,id)
 
     if (typeof active !== 'boolean') {
       return res.status(400).send({ message: "Please provide a valid active status." });
@@ -182,6 +175,7 @@ UserRouter.patch("/:id/active", async (req: Request, res: Response) => {
   }
 });
 
+// Get count of active users
 UserRouter.get('/:id/counts', async (req: Request, res: Response) => {
   try {
     const activeUsersCount = await User.count({
@@ -197,6 +191,7 @@ UserRouter.get('/:id/counts', async (req: Request, res: Response) => {
   }
 });
 
+// Get total count of all users
 UserRouter.get('/total/counts/all', async (req: Request, res: Response) => {
   try {
     const totalUsersCount = await User.count();
@@ -206,6 +201,5 @@ UserRouter.get('/total/counts/all', async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server Error' });
   }
 });
-
 
 export default UserRouter;

@@ -1,4 +1,3 @@
-
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelizeConnection from '../config'; // Adjust the path to your sequelize instance
 import Image from '../models/image'; // Adjust the path to your Image model
@@ -76,6 +75,13 @@ Restaurant.init({
     modelName: 'Restaurant',
     tableName: 'restaurants',
     timestamps: true,
+    indexes: [
+        {
+            unique: true,
+            name: 'restaurantId_index',
+            fields: ['id']
+        }
+    ]
 });
 
 // Define the association

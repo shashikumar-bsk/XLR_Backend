@@ -1,5 +1,6 @@
 const isDev = true;
-
+import dotenv from 'dotenv'
+dotenv.config();
 import { Booking } from './models';
 import Admin from './models/admin';
 import Driver from './models/driver';
@@ -11,7 +12,7 @@ import ServiceType from './models/servicetype';
 import User from './models/users';
 import DriverEarnings from './models/driverearnings';
 import Restaurant from './models/restaurant';
-import dish from './models/dish';
+//mport dish from './models/dish';
 import Product from './models/product';
 import SubCategory from './models/SubCategory';
 import SuperCategory from './models/SuperCategory';
@@ -20,9 +21,16 @@ import brand from'./models/brand';
 import Image from './models/image';
 import inventory from './models/inventory';
 import Address from './models/Address';
-import UserTransaction from './models/userTransaction'
+import UserTransaction from './models/userTransaction';
 import AddToCart from './models/add_to_cart';
+import DriverTransaction from './models/drivertransaction';
+import Vehicle from './models/vehicle';
+import Order from './models/order';
+// import OrderItems from './models/order_items';
+// import Payment from './models/payment';
 
+
+import OrderItem from './models/order_items';
 
 async function init() {
 
@@ -56,21 +64,22 @@ async function init() {
     await SuperCategory.sync({ alter: isDev });
     await Category.sync({ alter: isDev });
     await Restaurant.sync({alter: isDev});
-    await dish.sync({alter: isDev});
+    //await dish.sync({alter: isDev});
     await brand.sync({alter: isDev});
     await inventory.sync({alter: isDev});
     await Product.sync({alter: isDev});
     await Image.sync({alter: isDev});
-    // await Image.sync({ alter: isDev });
-    // await Restaurant.sync({alter: isDev})
-    // await Product.sync({alter: isDev})
-
-  await Restaurant.sync({alter: isDev});
+    await Restaurant.sync({alter: isDev});
     await brand.sync({alter: isDev})
-
     await Address.sync({alter: isDev});
-    await UserTransaction.sync({alter: isDev})
-    await AddToCart.sync({alter: isDev})
+    await UserTransaction.sync({alter: isDev});
+    await AddToCart.sync({alter: isDev});
+    await DriverTransaction.sync({alter: isDev});
+    await Vehicle.sync({alter: isDev});
+    await OrderItem.sync({alter: isDev})
+
+   // await OrderItems.sync({alter: isDev});
+   // await Payment.sync({alter: isDev})
 
 }
 

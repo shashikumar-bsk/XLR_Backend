@@ -65,10 +65,17 @@ Dish.init({
 }, {
     sequelize: sequelizeConnection,
     modelName: 'Dish',
-    tableName: 'dish',
+    tableName: 'dishes', // Adjust if necessary
     timestamps: true,
+    indexes: [
+        {
+            unique: true,
+            name: 'dishesId_index',
+            fields: ['id']
+        }
+    ]
 });
 
-Dish.belongsTo(Image, { foreignKey: 'image_id' });
+Dish.belongsTo(Image, { foreignKey: 'image_id' , as : "image" });   
 
 export default Dish;
