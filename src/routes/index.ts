@@ -34,6 +34,8 @@ import orderrouter from "./order";
 import dishRouter from "./dish";
 import driverAuthRouter from "./driverAuthRouter";
 
+import OrderItemRouter from "./order_items";
+
 const routes = Router();
 
 
@@ -66,7 +68,9 @@ routes.use('/transactions', transactionRouter)
 routes.use('/cart', cartRouter)
 routes.use('/drivertransactions',driverTransactionRouter)
 routes.use('/vehicle',VehicleRouter)
-routes.use('/order',orderrouter)
-// routes.use('/orderitems',OrderItemsRouter)
-// routes.use('/payments',paymentRouter)
+
+
+routes.use('/orderitems',OrderItemRouter)
+
+
 export default routes;
