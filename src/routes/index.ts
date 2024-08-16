@@ -26,8 +26,9 @@ import cartRouter from "./add_to_cartRoute";
 import driverTransactionRouter from "./drivertransaction";
 import VehicleRouter from "./VehicleRouter";
 import orderrouter from "./order";
-// import OrderItemsRouter from "./order_items";
-// import paymentRouter from "./payment";
+import paymentRouter from "./payment";
+
+
 
 const routes = Router();
 
@@ -59,5 +60,5 @@ routes.use('/drivertransactions',driverTransactionRouter)
 routes.use('/vehicle',VehicleRouter)
 routes.use('/order',orderrouter)
 // routes.use('/orderitems',OrderItemsRouter)
-// routes.use('/payments',paymentRouter)
+ routes.use('/payments',paymentRouter)
 export default routes;
