@@ -12,7 +12,7 @@ import ServiceType from './models/servicetype';
 import User from './models/users';
 import DriverEarnings from './models/driverearnings';
 import Restaurant from './models/restaurant';
-import dish from './models/dish';
+//mport dish from './models/dish';
 import Product from './models/product';
 import SubCategory from './models/SubCategory';
 import SuperCategory from './models/SuperCategory';
@@ -28,6 +28,8 @@ import Vehicle from './models/vehicle';
 import Order from './models/order';
 import Payment from './models/payment';
 
+
+import OrderItem from './models/order_items';
 
 async function init() {
 
@@ -61,7 +63,7 @@ async function init() {
     await SuperCategory.sync({ alter: isDev });
     await Category.sync({ alter: isDev });
     await Restaurant.sync({alter: isDev});
-    await dish.sync({alter: isDev});
+    //await dish.sync({alter: isDev});
     await brand.sync({alter: isDev});
     await inventory.sync({alter: isDev});
     await Product.sync({alter: isDev});
@@ -73,9 +75,9 @@ async function init() {
     await AddToCart.sync({alter: isDev});
     await DriverTransaction.sync({alter: isDev});
     await Vehicle.sync({alter: isDev});
-    await Order.sync({alter: isDev});
-   // await OrderItems.sync({alter: isDev});
-   await Payment.sync({alter: isDev})
+    await OrderItem.sync({alter: isDev})
+    await Payment.sync({alter: isDev})
+
 }
 
 const dbInit = () => {
