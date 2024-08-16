@@ -23,7 +23,6 @@ import inventoryRouter from "./inventory";
 import AddressRouter from "./AddressRoutes";
 import transactionRouter from "./userTransactionRoute";
 
-import cartRouter from "./add_to_cartRoute";
 import driverTransactionRouter from "./drivertransaction";
 import VehicleRouter from "./VehicleRouter";
 import orderrouter from "./order";
