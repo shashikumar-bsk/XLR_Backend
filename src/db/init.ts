@@ -26,8 +26,7 @@ import AddToCart from './models/add_to_cart';
 import DriverTransaction from './models/drivertransaction';
 import Vehicle from './models/vehicle';
 import Order from './models/order';
-// import OrderItems from './models/order_items';
-// import Payment from './models/payment';
+import Payment from './models/payment';
 
 
 import OrderItem from './models/order_items';
@@ -77,9 +76,7 @@ async function init() {
     await DriverTransaction.sync({alter: isDev});
     await Vehicle.sync({alter: isDev});
     await OrderItem.sync({alter: isDev})
-
-   // await OrderItems.sync({alter: isDev});
-   // await Payment.sync({alter: isDev})
+    await Payment.sync({alter: isDev})
 
 }
 
