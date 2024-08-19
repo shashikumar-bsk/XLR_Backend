@@ -82,5 +82,10 @@ Order.init({
   timestamps: true,
   underscored: true,
 });
+Order.belongsTo(User, { foreignKey: 'user_id' });
+User.hasMany(Order, { foreignKey: 'user_id' });
+
 
 export default Order;
+
+

@@ -25,7 +25,7 @@ import transactionRouter from "./userTransactionRoute";
 
 import driverTransactionRouter from "./drivertransaction";
 import VehicleRouter from "./VehicleRouter";
-import orderrouter from "./order";
+import orderRouter from "./order";
 // import OrderItemsRouter from "./order_items";
 // import paymentRouter from "./payment";
 
@@ -67,6 +67,8 @@ routes.use('/transactions', transactionRouter)
 routes.use('/cart', cartRouter)
 routes.use('/drivertransactions',driverTransactionRouter)
 routes.use('/vehicle',VehicleRouter)
+
+routes.use('/order',orderRouter)
 
 
 routes.use('/orderitems',OrderItemRouter)
