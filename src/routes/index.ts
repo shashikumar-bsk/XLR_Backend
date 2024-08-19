@@ -28,12 +28,15 @@ import VehicleRouter from "./VehicleRouter";
 import orderRouter from "./order";
 // import OrderItemsRouter from "./order_items";
 // import paymentRouter from "./payment";
+import paymentRouter from "./payment";
 
- import cartRouter from "./add_to_cartRoute";
+
+
 import dishRouter from "./dish";
 import driverAuthRouter from "./driverAuthRouter";
 
 import OrderItemRouter from "./order_items";
+import cartRouter from "./add_to_cartRoute";
 
 const routes = Router();
 
@@ -58,7 +61,6 @@ routes.use('/category',CategoryRouter)
 routes.use('/subcategory', SubCategoryRouter)
 routes.use('/supercategory', SuperCategoryRouter)
 routes.use('/brand',BrandRouter)
-
 routes.use('/image',ImageRouter)
 routes.use('/inventory',inventoryRouter)
 routes.use('/images', ImageRouter)
@@ -74,4 +76,6 @@ routes.use('/order',orderRouter)
 routes.use('/orderitems',OrderItemRouter)
 
 
+
+routes.use('/payments',paymentRouter)
 export default routes;
