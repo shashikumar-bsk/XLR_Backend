@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import Order from '../db/models/order'; // Adjust the path as necessary
+import { User } from '../db/models';
 
 const orderRouter = express.Router();
 
@@ -26,6 +27,38 @@ orderRouter.post('/', async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error creating order', error: error.message });
   }
 });
+
+orderRouter.get('/', async (req: Request, res: Response) => {
+  try {
+    const orders = await Order.findAll({
+      include: User // Include related User data
+    });
+    res.status(200).json(orders);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error fetching orders', error: error.message });
+  }
+});
+
+
+// Get a single order by ID with user data
+orderRouter.get('/:order_id', async (req: Request, res: Response) => {
+  try {
+    const { order_id } = req.params;
+
+    const order = await Order.findByPk(order_id, {
+      include: User // Include related User data
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    res.status(200).json(order);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error fetching order', error: error.message });
+  }
+});
+
 
 // Get all orders
 orderRouter.get('/', async (req: Request, res: Response) => {
