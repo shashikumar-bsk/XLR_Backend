@@ -28,7 +28,7 @@ restaurantRouter.post('/', async (req: Request, res: Response) => {
       opening_time,
       closing_time,
       image_id
-    });
+    }); 
 
     res.status(201).json({ success: true, data: newRestaurant });
   } catch (err) {
