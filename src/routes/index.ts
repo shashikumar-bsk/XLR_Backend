@@ -30,11 +30,11 @@ import orderrouter from "./order";
 // import OrderItemsRouter from "./order_items";
 // import paymentRouter from "./payment";
 
- import cartRouter from "./add_to_cartRoute";
 import dishRouter from "./dish";
 import driverAuthRouter from "./driverAuthRouter";
 
 import OrderItemRouter from "./order_items";
+import RestaurantCartRouter from "./CartItemForRestaurants"
 
 const routes = Router();
 
@@ -71,6 +71,8 @@ routes.use('/vehicle',VehicleRouter)
 
 
 routes.use('/orderitems',OrderItemRouter)
+routes.use('/RestaurantCart',RestaurantCartRouter)
+
 
 
 export default routes;

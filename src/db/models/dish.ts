@@ -76,6 +76,6 @@ Dish.init({
     ]
 });
 
-Dish.belongsTo(Image, { foreignKey: 'image_id' , as : "image" });   
+Dish.belongsTo(Image, { foreignKey: 'image_id', as: 'image' });
 
 export default Dish;

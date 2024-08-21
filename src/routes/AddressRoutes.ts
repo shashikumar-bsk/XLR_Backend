@@ -125,22 +125,6 @@ AddressRouter.patch('/update/:user_id', async (req: Request, res: Response) => {
   }
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Route to retrieve an address by ID
 AddressRouter.get('/details/:address_id', async (req: Request, res: Response) => {
   try {
