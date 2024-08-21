@@ -36,6 +36,7 @@ import dishRouter from "./dish";
 import driverAuthRouter from "./driverAuthRouter";
 
 import OrderItemRouter from "./order_items";
+import RestaurantCartRouter from "./CartItemForRestaurants"
 import cartRouter from "./add_to_cartRoute";
 
 const routes = Router();
@@ -74,6 +75,8 @@ routes.use('/order',orderRouter)
 
 
 routes.use('/orderitems',OrderItemRouter)
+routes.use('/RestaurantCart',RestaurantCartRouter)
+
 
 
 
