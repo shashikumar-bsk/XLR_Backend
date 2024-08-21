@@ -34,7 +34,6 @@ import driverAuthRouter from "./driverAuthRouter";
 import OrderItemRouter from "./order_items";
 
 import RestaurantCartRouter from "./CartItemForRestaurants"
-import cartRouter from "./add_to_cartRoute";
 import UsersRouter from "./userimage";
 
 

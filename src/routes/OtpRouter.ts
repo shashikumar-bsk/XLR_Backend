@@ -149,7 +149,7 @@ OTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
         const token = jwt.sign(
           { id: user.id, phone: sanitizedPhone ,service_id}, // Include user ID in payload
           JWT_SECRET, 
-          { expiresIn: '1h' }
+          { expiresIn: '12h' }
         );
         console.log('JWT Token:', token); // Log the token
 

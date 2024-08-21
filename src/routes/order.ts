@@ -5,9 +5,9 @@ import { User } from '../db/models';
 const orderRouter = express.Router();
 
 // Create a new order
-orderRouter.post('/', async (req: Request, res: Response) => {
+orderRouter.post('/create', async (req: Request, res: Response) => {
   try {
-    const { user_id, total_price,  order_status } = req.body;
+    const { user_id, total_price, order_status } = req.body;
 
     if (!user_id || !total_price || !order_status) {
       return res.status(400).json({ message: 'Missing required fields: user_id, total_price, order_status' });
@@ -16,17 +16,18 @@ orderRouter.post('/', async (req: Request, res: Response) => {
     const newOrder = await Order.create({
       user_id,
       total_price,
-    //   tax_amount,
-    //   discount_amount,
-    //   final_price,
-      order_status
+      //   tax_amount,
+      //   discount_amount,
+      //   final_price,
+      order_status,
     });
 
-    res.status(201).json(newOrder);
+    res.status(201).json({ success: true, order_id: newOrder.order_id });
   } catch (error: any) {
-    res.status(500).json({ message: 'Error creating order', error: error.message });
+    res.status(500).json({ success: false, message: 'Error creating order', error: error.message });
   }
 });
+
 
 orderRouter.get('/', async (req: Request, res: Response) => {
   try {
