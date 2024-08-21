@@ -153,4 +153,64 @@ RestaurantCartRouter.delete('/:user_id', async (req: Request, res: Response) => 
     }
 });
 
+
+// Get a single cart item by its ID
+// RestaurantCartRouter.get('/cart-items/:id', async (req: Request, res: Response) => {
+//     const { id } = req.params; // Destructure id from params
+//     console.log(`Fetching cart item with ID: ${id}`); // Debug log
+
+//     try {
+//         // Fetch the cart item with the associated dish and image
+//         const cartItem = await CartItem.findByPk(id, {
+//             include: [{
+//                 model: Dish,
+//                 include: [{ model: Image, as: 'image' }] // Correctly include Image with alias 'image'
+//             }],
+//         });
+
+//         if (!cartItem) {
+//             return res.status(404).json({ message: 'Cart item not found' });
+//         }
+
+//         // Calculate total price (if needed)
+//         await cartItem.calculateTotalPrice();
+
+//         res.status(200).json(cartItem);
+//     } catch (error) {
+//         res.status(500).json({ message: 'Failed to fetch cart item', error });
+//     }
+// });
+
+
+// Get all cart items by cart ID
+RestaurantCartRouter.get('/cart/:cart_id/items', async (req: Request, res: Response) => {
+    const { cart_id } = req.params; // Destructure cart_id from params
+
+    try {
+        // Fetch all cart items associated with the given cart_id
+        const cartItems = await CartItem.findAll({
+            where: { id: cart_id, is_deleted: false }, // Use the correct identifier
+            include: [{
+                model: Dish,
+                include: [{ model: Image, as: 'image' }] // Correctly include Image with alias 'image'
+            }],
+        });
+
+        if (cartItems.length === 0) {
+            return res.status(404).json({ message: 'No cart items found for this cart ID' });
+        }
+
+        // Calculate total price for each cart item
+        const cartItemsWithTotalPrice = await Promise.all(cartItems.map(async item => {
+            await item.calculateTotalPrice(); // Ensure total price is calculated
+            return item.toJSON();
+        }));
+
+        res.status(200).json(cartItemsWithTotalPrice);
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to fetch cart items', error });
+    }
+});
+
+
 export default RestaurantCartRouter;
