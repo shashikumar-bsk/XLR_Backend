@@ -25,17 +25,15 @@ import transactionRouter from "./userTransactionRoute";
 import cartRouter from "./add_to_cartRoute";
 import driverTransactionRouter from "./drivertransaction";  
 import VehicleRouter from "./VehicleRouter";
-import orderrouter from "./order";
+import orderRouter from "./order";
+// import OrderItemsRouter from "./order_items";
+// import paymentRouter from "./payment";
 import paymentRouter from "./payment";
-
-
-
-
 import dishRouter from "./dish";
 import driverAuthRouter from "./driverAuthRouter";
-
 import OrderItemRouter from "./order_items";
 import UsersRouter from "./userimage";
+
 
 const routes = Router();
 
@@ -67,7 +65,9 @@ routes.use('/transactions', transactionRouter)
 routes.use('/cart', cartRouter)
 routes.use('/drivertransactions',driverTransactionRouter)
 routes.use('/vehicle',VehicleRouter)
-routes.use('/order',orderrouter)
+routes.use('/order',orderRouter)
+routes.use('/orderitems',OrderItemRouter)
 routes.use('/payments',paymentRouter)
 routes.use('/userimage',UsersRouter)
+
 export default routes;

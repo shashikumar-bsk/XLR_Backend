@@ -217,4 +217,39 @@ RideRequestRouter.get('/driver/:driver_id/missed-orders', async (req: Request, r
   }
 });
 
+// Get orders for a specific user
+RideRequestRouter.get('/user/:user_id', async (req: Request, res: Response) => {
+  try {
+    const { user_id } = req.params; 
+
+    const getOrderDetails = await RideRequest.findAll({
+      where: { user_id: Number(user_id), is_deleted: false },
+      attributes: ['request_id', 'status'],
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'username'],
+        },
+        {
+          model: Driver,
+          attributes: ['driver_id', 'driver_name', 'vehicle_type'],
+        },
+        {
+          model: Booking,
+          attributes: ['booking_id', 'pickup_address', 'dropoff_address', 'service_id'],
+        },
+      ]
+    });
+
+    if (getOrderDetails .length === 0) {
+      return res.status(404).json({ message: 'No completed ride requests found' });
+    }
+    
+    res.json(getOrderDetails);
+  } catch (error: any) {
+    console.error('Error in fetching completed ride requests:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 export default RideRequestRouter;
