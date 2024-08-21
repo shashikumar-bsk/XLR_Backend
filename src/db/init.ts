@@ -26,6 +26,9 @@ import AddToCart from './models/add_to_cart';
 import DriverTransaction from './models/drivertransaction';
 import Vehicle from './models/vehicle';
 import Order from './models/order';
+import Payment from './models/payment';
+
+
 import OrderItem from './models/order_items';
 import CartItemRest from './models/CartItemRestaurants';
 
@@ -63,24 +66,23 @@ async function init() {
     await SubCategory.sync({ alter: isDev });
     await SuperCategory.sync({ alter: isDev });
     await Category.sync({ alter: isDev });
-    await Restaurant.sync({ alter: isDev });
-    await brand.sync({ alter: isDev });
-    await inventory.sync({ alter: isDev });
-    await Product.sync({ alter: isDev });
-    await Image.sync({ alter: isDev });
-    await Restaurant.sync({ alter: isDev });
-    await brand.sync({ alter: isDev })
-    await Address.sync({ alter: isDev });
-    await UserTransaction.sync({ alter: isDev });
-    await AddToCart.sync({ alter: isDev });
-    await DriverTransaction.sync({ alter: isDev });
-    await Vehicle.sync({ alter: isDev });
-    await OrderItem.sync({ alter: isDev });
-    await CartItemRest.sync({ alter: isDev });
-    await Order.sync({ alter: isDev });
-
-    // await Payment.sync({alter: isDev})
-    // await dish.sync({alter: isDev});
+    await Restaurant.sync({alter: isDev});
+    //await dish.sync({alter: isDev});
+    await brand.sync({alter: isDev});
+    await inventory.sync({alter: isDev});
+    await Product.sync({alter: isDev});
+    await Image.sync({alter: isDev});
+    await Restaurant.sync({alter: isDev});
+    await brand.sync({alter: isDev})
+    await Address.sync({alter: isDev});
+    await UserTransaction.sync({alter: isDev});
+    await AddToCart.sync({alter: isDev});
+    await DriverTransaction.sync({alter: isDev});
+    await Vehicle.sync({alter: isDev});
+    await OrderItem.sync({alter: isDev})
+    await Payment.sync({alter: isDev})
+    await CartItemRest.sync({alter: isDev})
+    await Order.sync({alter: isDev})
 
 }
 

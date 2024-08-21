@@ -23,18 +23,21 @@ import inventoryRouter from "./inventory";
 import AddressRouter from "./AddressRoutes";
 import transactionRouter from "./userTransactionRoute";
 
-import cartRouter from "./add_to_cartRoute";
 import driverTransactionRouter from "./drivertransaction";
 import VehicleRouter from "./VehicleRouter";
-import orderrouter from "./order";
+import orderRouter from "./order";
 // import OrderItemsRouter from "./order_items";
 // import paymentRouter from "./payment";
+import paymentRouter from "./payment";
+
+
 
 import dishRouter from "./dish";
 import driverAuthRouter from "./driverAuthRouter";
 
 import OrderItemRouter from "./order_items";
 import RestaurantCartRouter from "./CartItemForRestaurants"
+import cartRouter from "./add_to_cartRoute";
 
 const routes = Router();
 
@@ -59,7 +62,6 @@ routes.use('/category',CategoryRouter)
 routes.use('/subcategory', SubCategoryRouter)
 routes.use('/supercategory', SuperCategoryRouter)
 routes.use('/brand',BrandRouter)
-
 routes.use('/image',ImageRouter)
 routes.use('/inventory',inventoryRouter)
 routes.use('/images', ImageRouter)
@@ -69,10 +71,14 @@ routes.use('/cart', cartRouter)
 routes.use('/drivertransactions',driverTransactionRouter)
 routes.use('/vehicle',VehicleRouter)
 
+routes.use('/order',orderRouter)
+
 
 routes.use('/orderitems',OrderItemRouter)
 routes.use('/RestaurantCart',RestaurantCartRouter)
 
 
 
+
+routes.use('/payments',paymentRouter)
 export default routes;
