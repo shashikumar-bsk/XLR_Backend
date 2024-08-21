@@ -7,7 +7,7 @@ import DriverDocsRouter from "./driver-documents";
 import AdminRouter from "./admin";
 import DriverOTPRouter from "./driverOtpRouter";
 import ReceiverDetailsRouter from "./recieverRoute";
-import bookingRouter from "./BookingRoute";
+import bookingRouter from "./BookingRoute";                                                                       
 import rideRequestRouter from "./riderrequest";
 import driverEarningsRouter from "./driverearnings";
 import restaurantRouter from "./restaurant";
@@ -22,20 +22,20 @@ import BrandRouter from "./brand";
 import inventoryRouter from "./inventory";
 import AddressRouter from "./AddressRoutes";
 import transactionRouter from "./userTransactionRoute";
-
 import cartRouter from "./add_to_cartRoute";
-import driverTransactionRouter from "./drivertransaction";
+import driverTransactionRouter from "./drivertransaction";  
 import VehicleRouter from "./VehicleRouter";
 import orderrouter from "./order";
 import paymentRouter from "./payment";
 
 
 
- import cartRouter from "./add_to_cartRoute";
+
 import dishRouter from "./dish";
 import driverAuthRouter from "./driverAuthRouter";
 
 import OrderItemRouter from "./order_items";
+import UsersRouter from "./userimage";
 
 const routes = Router();
 
@@ -48,7 +48,6 @@ routes.use('/booking', bookingRouter)
 routes.use('/admin', AdminRouter)
 routes.use('/driverotp', DriverOTPRouter)
 routes.use('/auth', driverAuthRouter)
-
 routes.use('/reciever',authMiddleware,ReceiverDetailsRouter)
 routes.use('/bookings',authMiddleware,bookingRouter)
 routes.use('/riderequest',authMiddleware,rideRequestRouter)
@@ -70,4 +69,5 @@ routes.use('/drivertransactions',driverTransactionRouter)
 routes.use('/vehicle',VehicleRouter)
 routes.use('/order',orderrouter)
 routes.use('/payments',paymentRouter)
+routes.use('/userimage',UsersRouter)
 export default routes;

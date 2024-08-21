@@ -30,7 +30,7 @@ DriverOTPRouter.post('/send-otp', async (req: Request, res: Response) => {
 
   try {
     const response = await axios.post('https://auth.otpless.app/auth/otp/v1/send', {
-      phoneNumber: sanitizedPhone,
+      phoneNumber: 91+sanitizedPhone,
       otpLength: 4,
       channel: 'WHATSAPP',
       expiry: 600,
@@ -67,7 +67,7 @@ DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
 
   try {
     const response = await axios.post('https://auth.otpless.app/auth/otp/v1/verify', {
-      phoneNumber: phone,
+      phoneNumber: 91+phone,
       otp,
       orderId,
     }, {
