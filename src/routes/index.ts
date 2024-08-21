@@ -32,6 +32,9 @@ import paymentRouter from "./payment";
 import dishRouter from "./dish";
 import driverAuthRouter from "./driverAuthRouter";
 import OrderItemRouter from "./order_items";
+
+import RestaurantCartRouter from "./CartItemForRestaurants"
+import cartRouter from "./add_to_cartRoute";
 import UsersRouter from "./userimage";
 
 
@@ -67,6 +70,7 @@ routes.use('/drivertransactions',driverTransactionRouter)
 routes.use('/vehicle',VehicleRouter)
 routes.use('/order',orderRouter)
 routes.use('/orderitems',OrderItemRouter)
+routes.use('/RestaurantCart',RestaurantCartRouter)
 routes.use('/payments',paymentRouter)
 routes.use('/userimage',UsersRouter)
 
