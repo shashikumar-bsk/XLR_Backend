@@ -161,6 +161,22 @@ AddressRouter.delete('/delete/:address_id', async (req: Request, res: Response) 
   }
 });
 
+AddressRouter.get('/', async (req: Request, res: Response) => {
+  try {
+    // Retrieve all addresses
+    const addresses = await Address.findAll();
+
+    if (addresses.length === 0) {
+      return res.status(404).send({ message: 'No addresses found.' });
+    }
+
+    return res.status(200).send({ addresses });
+  } catch (error: any) {
+    console.error('Error retrieving addresses:', error);
+    return res.status(500).send({ message: `Error retrieving addresses: ${error.message}` });
+  }
+});
+
 export default AddressRouter;
 
 
