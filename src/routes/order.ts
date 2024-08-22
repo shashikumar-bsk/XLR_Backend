@@ -136,4 +136,27 @@ orderRouter.delete('/:order_id', async (req: Request, res: Response) => {
 });
 
 
+orderRouter.get('/:order_id/:user_id', async (req: Request, res: Response) => {
+  try {
+    const { order_id, user_id } = req.params;
+
+    const order = await Order.findOne({
+      where: {
+        order_id,
+        user_id,
+      },
+      include: User, // Optionally include related User data
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found for the given user' });
+    }
+
+    res.status(200).json(order);
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error fetching order', error: error.message });
+  }
+});
+
+
 export default orderRouter;
