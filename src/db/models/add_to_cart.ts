@@ -1,4 +1,5 @@
-                                                import { DataTypes, Model, Optional } from 'sequelize';
+
+import { DataTypes, Model, Optional } from 'sequelize';
 import sequelizeConnection from '../config'; // Update this path as needed
 import User from './users';
 import Promotion from './promotions';
@@ -8,6 +9,7 @@ interface AddToCartAttributes {
     cart_id: number;
     user_id: number;
     product_id: number;
+    image_url: string;
     quantity: number;
     price: number;
     total_price: number;
@@ -24,9 +26,13 @@ export interface AddToCartInput extends Optional<AddToCartAttributes, 'cart_id'>
 export interface AddToCartOutput extends Required<AddToCartAttributes> {}
 
 class AddToCart extends Model<AddToCartAttributes, AddToCartInput> implements AddToCartAttributes {
+    id(id: any, arg1: { include: { model: typeof Product; as: string; }[]; }) {
+        throw new Error('Method not implemented.');
+    }
     public cart_id!: number;
     public user_id!: number;
     public product_id!: number;
+    public image_url!: string;
     public quantity!: number;
     public price!: number;
     public total_price!: number;
@@ -59,6 +65,10 @@ AddToCart.init({
             model: Product,
             key: 'product_id'
         }
+    },
+    image_url: {
+        type: DataTypes.STRING,
+        allowNull: false
     },
     quantity: {
         type: DataTypes.INTEGER,
@@ -116,5 +126,10 @@ AddToCart.init({
         }
     ]
 });
+
+AddToCart.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+
+
+
 
 export default AddToCart;
