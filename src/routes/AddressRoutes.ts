@@ -177,6 +177,38 @@ AddressRouter.get('/', async (req: Request, res: Response) => {
   }
 });
 
+
+
+
+AddressRouter.post('/user/:user_id/create', async (req: Request, res: Response) => {
+  try {
+    const { user_id } = req.params;
+    const { house_number, apartment, landmark, type, city, state, zipcode, country, alternative_phone_number } = req.body;
+
+    if (!house_number || !type) {
+      return res.status(400).send({ message: 'Please fill in all required fields.' });
+    }
+
+    const newAddress = await Address.create({
+      house_number,
+      apartment,
+      landmark,
+      type,
+      user_id: parseInt(user_id, 10),
+      city,
+      state,
+      zipcode,
+      country,
+      alternative_phone_number
+    });
+
+    return res.status(201).send({ message: 'Address created successfully', address: newAddress });
+  } catch (error: any) {
+    console.error('Error creating address:', error);
+    return res.status(500).send({ message: `Error creating address: ${error.message}` });
+  }
+});
+
 export default AddressRouter;
 
 
