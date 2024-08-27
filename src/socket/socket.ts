@@ -3,6 +3,8 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import { acceptRide } from '../routes/rideService'; // Adjust the path as needed
 import { getAvailableDrivers } from '../services/driverService';
+import { createAdapter } from '@socket.io/redis-adapter';
+import redisClient from '../redis/redis';
 
 let io: SocketIOServer;
 
@@ -13,8 +15,32 @@ const initializeSocket = (server: HttpServer): SocketIOServer => {
     },
   });
 
+  const pubClient = redisClient.duplicate();
+  const subClient = redisClient.duplicate();
+  io.adapter(createAdapter(pubClient, subClient));
+
   io.on('connection', (socket: Socket) => {
     console.log('New client connected', socket.id);
+
+     // Example: Store and retrieve from Redis
+     socket.on('store_message', (message: string) => {
+      redisClient.set('last_message', message, (err:any) => {
+        if (err) {
+          console.error('Error storing message in Redis:', err);
+        } else {
+          console.log('Message stored in Redis');
+        }
+      });
+    });
+
+    socket.on('get_message', async () => {
+      try {
+        const message = await redisClient.get('last_message');
+        socket.emit('receive_message', message);
+      } catch (err) {
+        console.error('Error retrieving message from Redis:', err);
+      }
+    });
 
     // Handle ride request
     socket.on('ride_request', async (data: any, callback: Function) => {
@@ -93,3 +119,4 @@ const getSocketInstance = (): SocketIOServer => {
 };
 
 export { initializeSocket, getSocketInstance };
+
