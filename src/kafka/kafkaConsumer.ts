@@ -1,27 +1,27 @@
-// // kafkaConsumer.ts
-// import kafka from './kafka';
+// kafkaConsumer.ts
+import kafka from './kafka';
 
-// const consumer = kafka.consumer({ groupId: 'driver-location-group' });
+const consumer = kafka.consumer({ groupId: 'driver-location-group' });
 
-// const connectConsumer = async () => {
-//   await consumer.connect();
-// };
+const connectConsumer = async () => {
+  await consumer.connect();
+};
 
-// const subscribeAndRun = async (topic: string, callback: (message: any) => void) => {
-//   await consumer.subscribe({ topic });
+const subscribeAndRun = async (topic: string, callback: (message: any) => void) => {
+  await consumer.subscribe({ topic });
 
-//   await consumer.run({
-//     eachMessage: async ({ topic, partition, message }) => {
-//       if (message.value) {
-//         const data = JSON.parse(message.value.toString());
-//         callback(data);
-//       }
-//     },
-//   });
-// };
+  await consumer.run({
+    eachMessage: async ({ topic, partition, message }) => {
+      if (message.value) {
+        const data = JSON.parse(message.value.toString());
+        callback(data);
+      }
+    },
+  });
+};
 
-// const disconnectConsumer = async () => {
-//   await consumer.disconnect();
-// };
+const disconnectConsumer = async () => {
+  await consumer.disconnect();
+};
 
-// export { connectConsumer, subscribeAndRun, disconnectConsumer };
+export { connectConsumer, subscribeAndRun, disconnectConsumer };
