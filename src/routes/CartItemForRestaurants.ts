@@ -136,16 +136,22 @@ RestaurantCartRouter.delete('/cart-items/delete/:id', async (req: Request, res: 
 
 // Remove all cart items for a user (soft delete)
 RestaurantCartRouter.delete('/:user_id', async (req: Request, res: Response) => {
+    console.log("Delete request received for user_id:", req.params.user_id);
     const { user_id } = req.params; // Destructure user_id from params
     try {
+        if (!user_id) {
+            return res.status(400).json({ message: 'User ID is required' });
+        }
         // Delete all cart items for the specified user
         const deletedRows = await CartItem.destroy({
             where: { user_id: user_id, is_deleted: false } // Only delete items that are not already deleted
         });
+        console.log("Number of cart items deleted:", deletedRows);
 
         if (deletedRows === 0) {
-            return res.status(404).json({ message: 'No cart items found for this user' });
+            return res.status(200).json({ message: 'No cart items found for this user, nothing to delete.' });
         }
+
 
         res.status(200).json({ message: 'All cart items deleted successfully' });
     } catch (error) {

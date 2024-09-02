@@ -112,7 +112,7 @@ AddToCart.init({
     }
 }, {
     timestamps: true,
-    paranoid: true,
+    paranoid: false,
     sequelize: sequelizeConnection,
     tableName: 'cart_items',
 

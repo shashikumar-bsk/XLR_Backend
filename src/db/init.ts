@@ -31,6 +31,8 @@ import Payment from './models/payment';
 
 import OrderItem from './models/order_items';
 import CartItemRest from './models/CartItemRestaurants';
+import InstamartOrder from './models/instamartOrder';
+import instamartOrderItem from './models/instamartOrderItems';
 
 // import dish from './models/dish';
 // import Payment from './models/payment';
@@ -79,10 +81,12 @@ async function init() {
     await AddToCart.sync({alter: isDev});
     await DriverTransaction.sync({alter: isDev});
     await Vehicle.sync({alter: isDev});
-    await OrderItem.sync({alter: isDev})
-    await Payment.sync({alter: isDev})
-    await CartItemRest.sync({alter: isDev})
-    await Order.sync({alter: isDev})
+    await OrderItem.sync({alter: isDev});
+    await Payment.sync({alter: isDev});
+    await CartItemRest.sync({alter: isDev});
+    await Order.sync({alter: isDev});
+    await InstamartOrder.sync({alter: isDev});
+    await instamartOrderItem.sync({alter: isDev});
 
 }
 

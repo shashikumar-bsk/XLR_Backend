@@ -218,22 +218,25 @@ cartRouter.delete('/item/:cart_id', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
-
 cartRouter.get('/:user_id', async (req, res) => {
     const { user_id } = req.params;
 
+    console.log(`Fetching cart items for user_id: ${user_id}`); // Debugging line
+
     try {
         const items = await AddToCart.findAll({
-            attributes: ['cart_id', 'product_id','quantity',  'total_price', 'image_url', 'promotion_id'],
+            attributes: ['cart_id', 'product_id', 'quantity', 'total_price', 'image_url', 'promotion_id'],
             where: { user_id, is_deleted: false },
             include: [
-                { model: Product, as: 'product' }
+                { model: Product, as: 'product' } // Ensure this alias matches your model association
             ]
         });
 
-        if (!items.length) {
-            return res.status(404).json({ message: 'No items found in cart' });
-        }
+        console.log(`Retrieved items: ${JSON.stringify(items, null, 2)}`); // Enhanced debugging
+
+        // if (items.length === 0) {
+        //     return res.status(404).json({ message: 'No items found in cart' });
+        // }
 
         // Calculate the total payment and format to two decimal places
         const totalPayment = items.reduce((sum, item) => {
@@ -246,33 +249,39 @@ cartRouter.get('/:user_id', async (req, res) => {
             items,
             total_payment: totalPayment 
         });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error retrieving cart items' });
+    } catch (error: any) {
+        console.error('Error retrieving cart items:', error); // Enhanced error logging
+        res.status(500).json({ message: 'Error retrieving cart items', error: error.message });
     }
 });
+
+
 
 cartRouter.delete('/:user_id', async (req, res) => {
     const { user_id } = req.params;
 
+    console.log(`Attempting to delete all cart items for user_id: ${user_id}`); // Debugging line
+
     try {
-        // Mark all items in the cart for the given user_id as deleted
-        const [affectedRows] = await AddToCart.update(
-            { is_deleted: true }, // Set the is_deleted flag to true
-            { where: { user_id, is_deleted: false } } // Only update items that are not already deleted
-        );
+        // Permanently delete all items in the cart for the given user_id
+        const deletedCount = await AddToCart.destroy({
+            where: { user_id }
+        });
+
+        console.log(`Deleted ${deletedCount} items for user_id: ${user_id}`); // Debugging line
 
         // Check if any rows were affected
-        if (affectedRows === 0) {
-            return res.status(404).json({ message: 'No items found to delete' });
+        if (deletedCount > 0) {
+            res.status(200).json({ message: 'All cart items have been removed successfully' });
+        } else {
+            res.status(404).json({ message: 'No cart items found for the given user_id' });
         }
-
-        res.status(200).json({ message: 'All cart items have been removed' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error removing all cart items' });
+    } catch (error:any) {
+        console.error('Error removing all cart items:', error.message); // Enhanced error logging
+        res.status(500).json({ message: 'Error removing all cart items', error: error.message });
     }
 });
+
 cartRouter.get('/total/:user_id', async (req, res) => {
     const { user_id } = req.params;
 
