@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
+import redisClient from '../../src/redis/redis'
 
 require('dotenv').config();
 
@@ -93,6 +94,7 @@ AdminRouter.post('/', upload.single('admin_image'), async (req: Request, res: Re
       mobile_number,
       admin_image // Include the image URL in the creation
     });
+    
 
     return res.status(200).send({ message: 'Admin created successfully', data: createAdmin });
   } catch (error: any) {
@@ -139,20 +141,43 @@ AdminRouter.post('/login', async (req: Request, res: Response) => {
 AdminRouter.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    console.log(id)
+    // Check if the admin details are already in Redis
+    redisClient.get(`admin:${id}`, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error.' });
+      }
 
-    const admin = await Admin.findOne({ where: { admin_id: id } });
+      if (cachedData) {
+        // If data is found in Redis, parse it and send the response
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).send(JSON.parse(cachedData));
+      }
 
-    if (!admin) {
-      return res.status(404).send({ message: 'Admin not found.' });
-    }
+      // If data is not in Redis, fetch it from the database
+      const admin = await Admin.findOne({ where: { admin_id: id } });
 
-    return res.status(200).send(admin);
+      if (!admin) {
+        return res.status(404).send({ message: 'Admin not found.' });
+      }
+
+      // Store the admin details in Redis with an expiration time (e.g., 60 seconds)
+      // redisClient.setex(`admin:${id}`, 60, JSON.stringify(admin), (redisErr) => {
+      //   if (redisErr) {
+      //     console.error('Error setting data in Redis:', redisErr);
+      //   }
+      // });
+     await redisClient.set(`admin:${id}`,JSON.stringify(admin));
+     await redisClient.expire(`admin:${id}`,180)
+     console.log(redisClient.get(`admin:${id}`))
+      return res.status(200).send(admin);
+    });
   } catch (error: any) {
     console.error('Error in fetching admin by ID:', error);
     return res.status(500).send({ message: `Error in fetching admin: ${error.message}` });
   }
 });
-
 // Get all admins
 AdminRouter.get('/', async (req: Request, res: Response) => {
   try {
