@@ -125,22 +125,6 @@ AddressRouter.patch('/update/:user_id', async (req: Request, res: Response) => {
   }
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Route to retrieve an address by ID
 AddressRouter.get('/details/:address_id', async (req: Request, res: Response) => {
   try {
@@ -174,6 +158,54 @@ AddressRouter.delete('/delete/:address_id', async (req: Request, res: Response) 
   } catch (error: any) {
     console.error('Error deleting address:', error);
     return res.status(500).send({ message: `Error deleting address: ${error.message}` });
+  }
+});
+
+AddressRouter.get('/', async (req: Request, res: Response) => {
+  try {
+    // Retrieve all addresses
+    const addresses = await Address.findAll();
+
+    if (addresses.length === 0) {
+      return res.status(404).send({ message: 'No addresses found.' });
+    }
+
+    return res.status(200).send({ addresses });
+  } catch (error: any) {
+    console.error('Error retrieving addresses:', error);
+    return res.status(500).send({ message: `Error retrieving addresses: ${error.message}` });
+  }
+});
+
+
+
+
+AddressRouter.post('/user/:user_id/create', async (req: Request, res: Response) => {
+  try {
+    const { user_id } = req.params;
+    const { house_number, apartment, landmark, type, city, state, zipcode, country, alternative_phone_number } = req.body;
+
+    if (!house_number || !type) {
+      return res.status(400).send({ message: 'Please fill in all required fields.' });
+    }
+
+    const newAddress = await Address.create({
+      house_number,
+      apartment,
+      landmark,
+      type,
+      user_id: parseInt(user_id, 10),
+      city,
+      state,
+      zipcode,
+      country,
+      alternative_phone_number
+    });
+
+    return res.status(201).send({ message: 'Address created successfully', address: newAddress });
+  } catch (error: any) {
+    console.error('Error creating address:', error);
+    return res.status(500).send({ message: `Error creating address: ${error.message}` });
   }
 });
 

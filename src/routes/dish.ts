@@ -34,7 +34,8 @@ dishRouter.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const dish = await Dish.findByPk(id, { include: [Image] });
+    const dish = await Dish.findByPk(id, { include: [{ model: Image, as: 'image' }] });
+
 
     if (!dish) {
       return res.status(404).send({ message: 'Dish not found.' });
