@@ -36,7 +36,14 @@ ReceiverDetails.init({
 }, {
     timestamps: true,
     sequelize: config_1.default,
-    tableName: 'receiver_details'
+    tableName: 'receiver_details',
+    indexes: [
+        {
+            unique: true,
+            name: 'receiverId_index',
+            fields: ['receiver_id']
+        }
+    ]
 });
 // Set up the association
 // ReceiverDetails.belongsTo(User, {

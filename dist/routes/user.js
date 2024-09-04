@@ -14,7 +14,28 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const users_1 = __importDefault(require("../db/models/users"));
+const multer_1 = __importDefault(require("multer"));
+const multer_s3_1 = __importDefault(require("multer-s3"));
+const client_s3_1 = require("@aws-sdk/client-s3");
 const UserRouter = express_1.default.Router();
+// Configure AWS S3
+const s3 = new client_s3_1.S3Client({
+    region: process.env.BUCKET_REGION,
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+});
+// Configure multer to use S3
+const upload = (0, multer_1.default)({
+    storage: (0, multer_s3_1.default)({
+        s3: s3,
+        bucket: process.env.BUCKET_NAME,
+        key: (req, file, cb) => {
+            cb(null, `user_images/${Date.now()}_${file.originalname}`);
+        },
+    }),
+});
 // Create a new user
 UserRouter.post("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -185,6 +206,48 @@ UserRouter.get('/total/counts/all', (req, res) => __awaiter(void 0, void 0, void
     catch (error) {
         console.error('Error fetching total users count:', error);
         res.status(500).json({ message: 'Server Error' });
+    }
+}));
+UserRouter.patch("/:user_id/profile-image", upload.single("profile_image"), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const { user_id } = req.params;
+        const profile_image = (_a = req.file) === null || _a === void 0 ? void 0 : _a.location;
+        // Check if the image is provided
+        if (!profile_image) {
+            return res.status(400).send({ message: "Profile image is required." });
+        }
+        // Find the user by ID
+        const user = yield users_1.default.findByPk(user_id);
+        if (!user) {
+            return res.status(404).send({ message: "User not found." });
+        }
+        // Update only the profile image
+        user.profile_image = profile_image;
+        // Save the updated user to the database
+        yield user.save();
+        return res.status(200).send({ message: "Profile image updated successfully", data: user });
+    }
+    catch (error) {
+        console.error("Error in updating profile image:", error);
+        return res.status(500).send({ message: `Error in updating profile image: ${error.message}` });
+    }
+}));
+UserRouter.get("/:user_id/profile_image", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { user_id } = req.params;
+        // Find the user by ID
+        const user = yield users_1.default.findByPk(user_id, {
+            attributes: ['profile_image'],
+        });
+        if (!user) {
+            return res.status(404).send({ message: "User not found." });
+        }
+        return res.status(200).send({ profile_image: user.profile_image });
+    }
+    catch (error) {
+        console.error("Error in retrieving profile image:", error);
+        return res.status(500).send({ message: `Error in retrieving profile image: ${error.message}` });
     }
 }));
 exports.default = UserRouter;

@@ -70,6 +70,18 @@ RideRequest.init({
 }, {
     timestamps: true,
     sequelize: config_1.default,
-    tableName: 'ride_request_tbl'
+    tableName: 'ride_request_tbl',
+    indexes: [
+        {
+            unique: true,
+            name: 'requestId_index',
+            fields: ['request_id']
+        },
+        {
+            unique: false,
+            name: 'requestId_index',
+            fields: ['user_id']
+        }
+    ]
 });
 exports.default = RideRequest;

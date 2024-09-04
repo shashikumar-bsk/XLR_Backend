@@ -5,23 +5,32 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const sequelize_1 = require("sequelize");
 const config_1 = __importDefault(require("../config")); // Adjust the path as needed
-const users_1 = __importDefault(require("./users"));
-// Define the Transaction model
-class Transaction extends sequelize_1.Model {
+const driver_1 = __importDefault(require("./driver")); // Adjust the path to the driver model
+const riderequest_1 = __importDefault(require("./riderequest")); // Adjust the path to the rideRequest model
+// Define the DriverTransaction model
+class DriverTransaction extends sequelize_1.Model {
 }
 // Initialize the model
-Transaction.init({
+DriverTransaction.init({
     transaction_id: {
         type: sequelize_1.DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
     },
-    user_id: {
+    driver_id: {
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: true,
         references: {
-            model: users_1.default,
-            key: 'id'
+            model: driver_1.default,
+            key: 'driver_id'
+        }
+    },
+    request_id: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: riderequest_1.default,
+            key: 'request_id'
         }
     },
     wallet_balance_before: {
@@ -47,10 +56,6 @@ Transaction.init({
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
     },
-    reference_id: {
-        type: sequelize_1.DataTypes.STRING,
-        allowNull: true,
-    },
     transaction_date: {
         type: sequelize_1.DataTypes.DATE,
         allowNull: false,
@@ -58,14 +63,7 @@ Transaction.init({
     }
 }, {
     sequelize: config_1.default,
-    tableName: 'userTransactions',
+    tableName: 'driverTransactions',
     timestamps: true,
-    indexes: [
-        {
-            unique: false,
-            name: 'transactionUserId_index',
-            fields: ['user_id']
-        }
-    ]
 });
-exports.default = Transaction;
+exports.default = DriverTransaction;

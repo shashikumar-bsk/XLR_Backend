@@ -15,7 +15,7 @@ if (!JWT_SECRET) {
 const authMiddleware = (req, res, next) => {
     var _a;
     const token = (_a = req.header('Authorization')) === null || _a === void 0 ? void 0 : _a.replace('Bearer ', '');
-    console.log("token is  me ", token);
+    console.log("token is  ", token);
     if (!token) {
         return res.status(401).json({ error: 'Access denied. No token provided.' });
     }

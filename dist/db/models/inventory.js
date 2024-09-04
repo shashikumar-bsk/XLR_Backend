@@ -39,6 +39,18 @@ Inventory.init({
     modelName: 'Inventory',
     tableName: 'inventories',
     timestamps: true,
+    indexes: [
+        {
+            unique: true,
+            name: 'inventoryId_index',
+            fields: ['inventory_id']
+        },
+        {
+            unique: false,
+            name: 'inventoryId_index',
+            fields: ['product_id']
+        }
+    ]
 });
 Inventory.belongsTo(product_1.default, { foreignKey: 'product_id' });
 exports.default = Inventory;

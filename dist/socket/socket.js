@@ -8,11 +8,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSocketInstance = exports.initializeSocket = void 0;
 const socket_io_1 = require("socket.io");
 const rideService_1 = require("../routes/rideService"); // Adjust the path as needed
 const driverService_1 = require("../services/driverService");
+const redis_adapter_1 = require("@socket.io/redis-adapter");
+const redis_1 = __importDefault(require("../redis/redis"));
 let io;
 const initializeSocket = (server) => {
     io = new socket_io_1.Server(server, {
@@ -20,8 +25,31 @@ const initializeSocket = (server) => {
             origin: '*', // Adjust according to your CORS policy
         },
     });
+    const pubClient = redis_1.default.duplicate();
+    const subClient = redis_1.default.duplicate();
+    io.adapter((0, redis_adapter_1.createAdapter)(pubClient, subClient));
     io.on('connection', (socket) => {
         console.log('New client connected', socket.id);
+        // Example: Store and retrieve from Redis
+        socket.on('store_message', (message) => {
+            redis_1.default.set('last_message', message, (err) => {
+                if (err) {
+                    console.error('Error storing message in Redis:', err);
+                }
+                else {
+                    console.log('Message stored in Redis');
+                }
+            });
+        });
+        socket.on('get_message', () => __awaiter(void 0, void 0, void 0, function* () {
+            try {
+                const message = yield redis_1.default.get('last_message');
+                socket.emit('receive_message', message);
+            }
+            catch (err) {
+                console.error('Error retrieving message from Redis:', err);
+            }
+        }));
         // Handle ride request
         socket.on('ride_request', (data, callback) => __awaiter(void 0, void 0, void 0, function* () {
             try {

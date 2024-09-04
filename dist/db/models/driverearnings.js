@@ -79,6 +79,18 @@ DriverEarnings.init({
     modelName: 'DriverEarnings',
     tableName: 'driver_earnings',
     timestamps: true,
+    indexes: [
+        {
+            unique: false,
+            name: 'earningDriverId_index',
+            fields: ['driver_id']
+        },
+        {
+            unique: true,
+            name: 'earningDriverId_index',
+            fields: ['id']
+        }
+    ],
     hooks: {
         beforeSave: (driverEarnings) => __awaiter(void 0, void 0, void 0, function* () {
             // Compute daily earnings
