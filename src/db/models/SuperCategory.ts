@@ -40,7 +40,14 @@ SuperCategory.init({
 }, {
     timestamps: true,
     sequelize: sequelizeConnection,
-    tableName: 'super_categories'
+    tableName: 'super_categories',
+    indexes: [
+        {
+            unique: true,
+            name: 'superCategoryId_index',
+            fields: ['super_category_id']
+        }
+    ]
 });
 
 

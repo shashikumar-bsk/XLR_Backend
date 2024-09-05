@@ -9,6 +9,7 @@ interface UserAttributes {
     password: string;
     gender?: string;
     phone: string;
+    profile_image?: string;  // Add profile_image attribute
     active: boolean;
     is_deleted: boolean;
     createdAt?: Date;
@@ -25,6 +26,7 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
     public password!: string;
     public gender!: string;
     public phone!: string;
+    public profile_image!: string;  // Add profile_image attribute
     public active!: boolean;
     public is_deleted!: boolean;
 
@@ -58,7 +60,11 @@ User.init({
         type: DataTypes.STRING(15), // Define phone attribute
         allowNull: false,
         unique: true,
-      },
+    },
+    profile_image: {
+        type: DataTypes.STRING(255), // Define profile_image attribute
+        allowNull: true,
+    },
     active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true
@@ -70,7 +76,14 @@ User.init({
 }, {
     timestamps: true,
     sequelize: sequelizeConnection,
-    tableName: 'User_tbl'
+    tableName: 'User_tbl',
+    indexes: [
+        {
+            unique: true,
+            name: 'userId_index',
+            fields: ['id']
+        }
+    ]
 });
 
 export default User;

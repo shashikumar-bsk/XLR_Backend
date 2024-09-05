@@ -58,7 +58,10 @@ typings/
 # Yarn Integrity file
 .yarn-integrity
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 92aab5d190bd6144a7bf28457c9a20876060746a
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache

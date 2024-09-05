@@ -51,6 +51,13 @@ Restaurant.init({
     modelName: 'Restaurant',
     tableName: 'restaurants',
     timestamps: true,
+    indexes: [
+        {
+            unique: true,
+            name: 'restaurantId_index',
+            fields: ['id']
+        }
+    ]
 });
 // Define the association
 Restaurant.belongsTo(image_1.default, { foreignKey: 'image_id', as: 'image' });

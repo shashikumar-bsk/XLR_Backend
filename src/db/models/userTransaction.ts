@@ -90,6 +90,13 @@ Transaction.init(
         sequelize,
         tableName: 'userTransactions',
         timestamps: true,
+        indexes: [
+            {
+                unique: false,
+                name: 'transactionUserId_index',
+                fields: ['user_id']
+            }
+        ]
     }
 );
 

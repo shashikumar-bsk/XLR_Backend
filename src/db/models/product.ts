@@ -12,6 +12,7 @@ interface ProductAttributes {
     image_id: number;
     name: string;
     description?: string;
+    quantity:number;
     price: number;
     discount_price: number;
     is_available: boolean;
@@ -29,6 +30,7 @@ class Product extends Model<ProductAttributes, ProductInput> implements ProductA
     public image_id!: number;
     public name!: string;
     public description?: string;
+    public quantity!: number;
     public price!: number;
     public discount_price!: number;
     public is_available!: boolean;
@@ -75,6 +77,12 @@ Product.init({
         type: DataTypes.TEXT,
         allowNull: true,
     },
+    quantity: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+
+    },
+
     price: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
@@ -92,6 +100,18 @@ Product.init({
     modelName: 'Product',
     tableName: 'products',
     timestamps: true,
+    indexes: [
+        {
+            unique: true,
+            name: 'productId_index',
+            fields: ['product_id']
+        }
+    ]
 });
+Product.belongsTo(SubCategory, { foreignKey:'sub_category_id', as:'subCategory' });
+
+Product.belongsTo(Brand, { foreignKey: 'brand_id', as:'brand' });
+
+Product.belongsTo(Image, { foreignKey: 'image_id', as:'image' });
 
 export default Product;

@@ -10,8 +10,10 @@ interface AdminAttributes {
     mobile_number: string;
     otp_session_id?: string | null;
     otp_timestamp?: Date | null;
+    admin_image?: string | null; // New field for admin image URL
     createdAt?: Date;
     updatedAt?: Date;
+    
 }
 
 export interface AdminInput extends Optional<AdminAttributes, 'admin_id'> {}
@@ -25,7 +27,7 @@ class Admin extends Model<AdminAttributes, AdminInput> implements AdminAttribute
     public mobile_number!: string;
     public otp_session_id!: string | null;
     public otp_timestamp!: Date | null;
-
+    public admin_image!: string | null; // New field for admin image URL
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -61,6 +63,11 @@ Admin.init({
     },
     otp_timestamp: {
         type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null
+    },
+    admin_image: {
+        type: DataTypes.STRING(255),
         allowNull: true,
         defaultValue: null
     }
