@@ -43,6 +43,15 @@ SubCategory.init({
 }, {
     timestamps: true,
     sequelize: config_1.default,
-    tableName: 'sub_categories'
+    tableName: 'sub_categories',
+    indexes: [
+        {
+            unique: true,
+            name: 'subCategoryId_index',
+            fields: ['sub_category_id']
+        }
+    ]
 });
+SubCategory.belongsTo(Category_1.default, { foreignKey: 'category_id', as: 'category' });
+SubCategory.belongsTo(image_1.default, { foreignKey: 'image_id', as: 'image' });
 exports.default = SubCategory;
