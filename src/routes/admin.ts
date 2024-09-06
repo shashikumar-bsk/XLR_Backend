@@ -171,7 +171,7 @@ AdminRouter.get('/:id', async (req: Request, res: Response) => {
      await redisClient.set(`admin:${id}`,JSON.stringify(admin));
      await redisClient.expire(`admin:${id}`,180)
      console.log(redisClient.get(`admin:${id}`))
-      return res.status(200).send(admin);
+      return res.status(200).send("admin");
     });
   } catch (error: any) {
     console.error('Error in fetching admin by ID:', error);
@@ -195,6 +195,7 @@ AdminRouter.patch('/:id', upload.single('admin_image'), async (req: Request, res
   try {
     const { id } = req.params;
     const { admin_name, email, password, mobile_number } = req.body;
+    // console.log(req.body)
     const admin_image = (req.file as any)?.location;
 
     const admin = await Admin.findOne({ where: { admin_id: id } });
@@ -236,6 +237,7 @@ AdminRouter.patch('/:id', upload.single('admin_image'), async (req: Request, res
 
     // Update admin
     const updateData: any = { admin_name, email, password: updatedPassword, mobile_number };
+    console.log(updateData)
     if (admin_image) {
       updateData.admin_image = admin_image;
     }
