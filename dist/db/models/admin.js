@@ -41,6 +41,11 @@ Admin.init({
         type: sequelize_1.DataTypes.DATE,
         allowNull: true,
         defaultValue: null
+    },
+    admin_image: {
+        type: sequelize_1.DataTypes.STRING(255),
+        allowNull: true,
+        defaultValue: null
     }
 }, {
     timestamps: true,

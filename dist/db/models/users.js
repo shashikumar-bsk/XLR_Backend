@@ -35,6 +35,10 @@ User.init({
         allowNull: false,
         unique: true,
     },
+    profile_image: {
+        type: sequelize_1.DataTypes.STRING(255),
+        allowNull: true,
+    },
     active: {
         type: sequelize_1.DataTypes.BOOLEAN,
         defaultValue: true
@@ -46,6 +50,13 @@ User.init({
 }, {
     timestamps: true,
     sequelize: config_1.default,
-    tableName: 'User_tbl'
+    tableName: 'User_tbl',
+    indexes: [
+        {
+            unique: true,
+            name: 'userId_index',
+            fields: ['id']
+        }
+    ]
 });
 exports.default = User;

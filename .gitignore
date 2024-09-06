@@ -26,7 +26,6 @@ coverage
 .lock-wscript
 
 # Compiled binary addons (https://nodejs.org/api/addons.html)
-build/Release
 
 # Dependency directories
 node_modules/
@@ -59,6 +58,14 @@ typings/
 # Yarn Integrity file
 .yarn-integrity
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+
+=======
+>>>>>>> 92aab5d190bd6144a7bf28457c9a20876060746a
+=======
+
+>>>>>>> 848519a2c33b65e066dee53711b9fb1c4356b961
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache

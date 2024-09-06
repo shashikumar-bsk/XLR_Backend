@@ -14,24 +14,23 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const Category_1 = __importDefault(require("../db/models/Category"));
-const image_1 = __importDefault(require("../db/models/image"));
 const SuperCategory_1 = __importDefault(require("../db/models/SuperCategory"));
+const image_1 = __importDefault(require("../db/models/image"));
 const CategoryRouter = express_1.default.Router();
 // Create Category
 CategoryRouter.post('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { super_category_id, name, description, image_id } = req.body;
-        if (super_category_id) {
-            const superCategoryExists = yield SuperCategory_1.default.findByPk(super_category_id);
-            if (!superCategoryExists) {
-                return res.status(400).json({ error: 'Super Category ID does not exist' });
-            }
+        // Validate if SuperCategory exists
+        const superCategory = yield SuperCategory_1.default.findByPk(super_category_id);
+        if (!superCategory) {
+            return res.status(400).send({ message: 'Invalid super_category_id' });
         }
-        // Validate that the image_id exists in the Image table if provided
+        // Validate if Image exists (if provided)
         if (image_id) {
-            const imageExists = yield image_1.default.findByPk(image_id);
-            if (!imageExists) {
-                return res.status(400).json({ error: 'Image ID does not exist' });
+            const image = yield image_1.default.findByPk(image_id);
+            if (!image) {
+                return res.status(400).send({ message: 'Invalid image_id' });
             }
         }
         const newCategory = yield Category_1.default.create({ super_category_id, name, description, image_id });
@@ -44,7 +43,12 @@ CategoryRouter.post('/', (req, res) => __awaiter(void 0, void 0, void 0, functio
 // Get all Categories
 CategoryRouter.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const categories = yield Category_1.default.findAll();
+        const categories = yield Category_1.default.findAll({
+            include: [
+                { model: SuperCategory_1.default, as: 'superCategory' },
+                { model: image_1.default, as: 'image' }
+            ]
+        });
         res.status(200).send(categories);
     }
     catch (error) {
@@ -55,13 +59,19 @@ CategoryRouter.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function
 CategoryRouter.get('/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        const category = yield Category_1.default.findByPk(id);
+        const category = yield Category_1.default.findByPk(id, {
+            include: [
+                { model: SuperCategory_1.default, as: 'superCategory' },
+                { model: image_1.default, as: 'image' }
+            ]
+        });
         if (!category) {
             return res.status(404).send({ message: 'Category not found' });
         }
         res.status(200).send(category);
     }
     catch (error) {
+        console.error('Error fetching category:', error);
         res.status(500).send({ message: error.message });
     }
 }));

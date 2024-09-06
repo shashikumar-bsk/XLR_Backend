@@ -36,6 +36,13 @@ Brand.init({
     modelName: 'Brand',
     tableName: 'brands',
     timestamps: true,
+    indexes: [
+        {
+            unique: true,
+            name: 'brandId_index',
+            fields: ['brand_id']
+        }
+    ]
 });
 // Export the Brand model
 exports.default = Brand;

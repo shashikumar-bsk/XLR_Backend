@@ -20,6 +20,6 @@ ServiceType.init({
     }
 }, {
     sequelize: config_1.default,
-    tableName: 'service_type'
+    tableName: 'service_type',
 });
 exports.default = ServiceType;
