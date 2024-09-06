@@ -69,10 +69,10 @@ async function runKafka(io: SocketIOServer) {
           if (users[data.userId]) {
             users[data.userId].emit('RIDE_ACCEPTED', {
               request_id: data.bookingId,
-              user_id: data.driverId,
-              driver_id: data.userId,
+              user_id: data.userId,
+              driver_id: data.driverId,
               service_type_id: data.serviceType,
-              receiver_id: data.receiverId,
+              receiver_id: data.receiverId,             
               booking_id: data.bookingId,
               status: data.status,
               rideDetails: pendingRides[data.bookingId],
@@ -133,7 +133,7 @@ export const socketHandlers = (io: SocketIOServer) => {
       const rideRequest = {
         rideBookingId: 'ride_' + Math.random().toString(36).substr(2, 9),
         userId: data.userId,
-        driverId: null,
+        driverId: data.driverId,
         startLocation: data.startLocation,
         endLocation: data.endLocation,
         fare: data.fare,
