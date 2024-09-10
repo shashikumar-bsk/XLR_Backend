@@ -34,6 +34,7 @@ class RideRequest extends Model<RideRequestAttributes, RideRequestInput> impleme
 
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
+  id: any;
 }
 
 RideRequest.init({

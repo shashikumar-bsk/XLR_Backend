@@ -3,6 +3,7 @@ import Driver from '../db/models/driver';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
+import redisClient from '../../src/redis/redis'
 
 dotenv.config();
 const DriverOTPRouter = express.Router();
@@ -123,25 +124,50 @@ DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
 });
 
 
+
 DriverOTPRouter.get('/check-driver', async (req: Request, res: Response) => {
-  const phone = req.query.phone as string; // Ensure phoneNumber is treated as a string
+  const phone = req.query.phone as string; // Ensure phone is treated as a string
 
   if (!phone) {
     return res.status(400).json({ error: 'Phone number is required' });
   }
 
+  // Define the cache key for the driver
+  const cacheKey = `driver:phone:${phone}`;
+
   try {
-    const driver = await Driver.findOne({ where: { phone: phone, is_deleted: false } });
+    // Check if the driver data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
 
-    if (!driver) {
-      return res.status(404).json({ error: 'Driver not found or inactive' });
-    }
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.json(JSON.parse(cachedData));
+      }
 
-    res.json(driver);
+      // Fetch the driver data from the database
+      const driver = await Driver.findOne({ where: { phone: phone, is_deleted: false } });
+
+      if (!driver) {
+        return res.status(404).json({ error: 'Driver not found or inactive' });
+      }
+
+      // Store the driver data in Redis with an expiration time of 3 minutes
+      await redisClient.set(cacheKey, JSON.stringify(driver));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the driver data
+      res.json(driver);
+    });
   } catch (error) {
     console.error('Error fetching driver details:', error);
     res.status(500).json({ error: 'Failed to fetch driver details' });
   }
 });
+
 
 export default DriverOTPRouter;

@@ -2,33 +2,57 @@ import express, { Request, Response } from 'express';
 import CartItem from '../db/models/CartItemRestaurants';
 import Dish from '../db/models/dish';
 import Image from '../db/models/image';
+import redisClient from '../../src/redis/redis'
 
 const RestaurantCartRouter = express.Router();
 
 // Get all cart items for a user
 RestaurantCartRouter.get('/cart-items/:user_id', async (req: Request, res: Response) => {
-    const { user_id } = req.params; // Changed from req.body to req.params
+    const { user_id } = req.params;
     console.log("User ID:", user_id);
+  
     try {
+      // Check if cart items for the user are already cached in Redis
+      redisClient.get(`cartItems:${user_id}`, async (err, cachedData) => {
+        if (err) {
+          console.error('Redis error:', err);
+          return res.status(500).json({ message: 'Internal server error.' });
+        }
+  
+        if (cachedData) {
+          // If data is found in Redis, parse and return it
+          console.log('Cache hit, returning data from Redis');
+          return res.status(200).json(JSON.parse(cachedData));
+        }
+  
+        // If data is not in Redis, fetch from the database
         const cartItems = await CartItem.findAll({
-            where: { user_id: user_id, is_deleted: false }, // Only fetch items that are not deleted
-            include: [{
-                model: Dish,
-                include: [{ model: Image, as: 'image' }] // Correctly include Image with alias 'image'
-            }],
+          where: { user_id: user_id, is_deleted: false }, // Fetch only non-deleted items
+          include: [{
+            model: Dish,
+            include: [{ model: Image, as: 'image' }] // Correctly include Image with alias 'image'
+          }],
         });
-
+  
         // Calculate total price for each cart item
         const cartItemsWithTotalPrice = await Promise.all(cartItems.map(async item => {
-            await item.calculateTotalPrice(); // Ensure total price is calculated
-            return item.toJSON();
+          await item.calculateTotalPrice(); // Ensure total price is calculated
+          return item.toJSON();
         }));
-
+  
+        // Store the fetched cart items in Redis with a 3-minute expiration
+        await redisClient.set(`cartItems:${user_id}`, JSON.stringify(cartItemsWithTotalPrice));
+        await redisClient.expire(`cartItems:${user_id}`, 180);
+  
+        // Respond with the cart items
         res.status(200).json(cartItemsWithTotalPrice);
+      });
     } catch (error) {
-        res.status(500).json({ message: 'Failed to fetch cart items', error });
+      console.error('Failed to fetch cart items:', error);
+      res.status(500).json({ message: 'Failed to fetch cart items', error });
     }
-});
+  });
+  
 
 // Add an item to the cart
 RestaurantCartRouter.post('/cart-items', async (req: Request, res: Response) => {
@@ -189,34 +213,56 @@ RestaurantCartRouter.delete('/:user_id', async (req: Request, res: Response) => 
 
 
 // Get all cart items by cart ID
+
 RestaurantCartRouter.get('/cart/:cart_id/items', async (req: Request, res: Response) => {
-    const { cart_id } = req.params; // Destructure cart_id from params
-
+    const { cart_id } = req.params;
+  
     try {
-        // Fetch all cart items associated with the given cart_id
-        const cartItems = await CartItem.findAll({
-            where: { id: cart_id, is_deleted: false }, // Use the correct identifier
-            include: [{
-                model: Dish,
-                include: [{ model: Image, as: 'image' }] // Correctly include Image with alias 'image'
-            }],
-        });
-
-        if (cartItems.length === 0) {
-            return res.status(404).json({ message: 'No cart items found for this cart ID' });
+      // Check if cart items for the cart_id are already cached in Redis
+      redisClient.get(`cartItems:${cart_id}`, async (err, cachedData) => {
+        if (err) {
+          console.error('Redis error:', err);
+          return res.status(500).json({ message: 'Internal server error.' });
         }
-
+  
+        if (cachedData) {
+          // If data is found in Redis, parse and return it
+          console.log('Cache hit, returning data from Redis');
+          return res.status(200).json(JSON.parse(cachedData));
+        }
+  
+        // If data is not in Redis, fetch from the database
+        const cartItems = await CartItem.findAll({
+          where: { id: cart_id, is_deleted: false },
+          include: [{
+            model: Dish,
+            include: [{ model: Image, as: 'image' }]
+          }],
+        });
+  
+        if (cartItems.length === 0) {
+          return res.status(404).json({ message: 'No cart items found for this cart ID' });
+        }
+  
         // Calculate total price for each cart item
         const cartItemsWithTotalPrice = await Promise.all(cartItems.map(async item => {
-            await item.calculateTotalPrice(); // Ensure total price is calculated
-            return item.toJSON();
+          await item.calculateTotalPrice();
+          return item.toJSON();
         }));
-
+  
+        // Store the fetched cart items in Redis with a 3-minute expiration
+        await redisClient.set(`cartItems:${cart_id}`, JSON.stringify(cartItemsWithTotalPrice));
+        await redisClient.expire(`cartItems:${cart_id}`, 120);
+  
+        // Respond with the cart items
         res.status(200).json(cartItemsWithTotalPrice);
+      });
     } catch (error) {
-        res.status(500).json({ message: 'Failed to fetch cart items', error });
+      console.error('Failed to fetch cart items:', error);
+      res.status(500).json({ message: 'Failed to fetch cart items', error });
     }
-});
+  });
+  
 
 
 export default RestaurantCartRouter;

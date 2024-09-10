@@ -4,6 +4,7 @@ import multer from "multer";
 import multerS3 from "multer-s3";
 import { S3Client } from "@aws-sdk/client-s3";
 import dotenv from "dotenv";
+import redisClient from '../../src/redis/redis'
 
 dotenv.config();
 
@@ -85,24 +86,47 @@ UsersRouter.post("/", upload.single("profile_image"), async (req: Request, res: 
 
 
   // Get the profile image for a specific user
-  UsersRouter.get("/:user_id/profile_image", async (req: Request, res: Response) => {
-    try {
-        const { user_id } = req.params;
+UsersRouter.get("/:user_id/profile_image", async (req: Request, res: Response) => {
+  const { user_id } = req.params;
+  const cacheKey = `userProfileImage:${user_id}`; // Define a cache key based on user ID
 
-        // Find the user by ID
-        const user = await User.findByPk(user_id, {
-            attributes: ['profile_image'], // Only fetch the profile_image attribute
-        });
+  try {
+    // Check if the profile image is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
 
-        if (!user) {
-            return res.status(404).send({ message: "User not found." });
-        }
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).json({ profile_image: JSON.parse(cachedData) });
+      }
 
-        return res.status(200).send({ profile_image: user.profile_image });
-    } catch (error: any) {
-        console.error("Error in retrieving profile image:", error);
-        return res.status(500).send({ message: `Error in retrieving profile image: ${error.message}` });
-    }
+      // Fetch the profile image from the database
+      const user = await User.findByPk(user_id, {
+        attributes: ['profile_image'], // Only fetch the profile_image attribute
+      });
+
+      if (!user) {
+        return res.status(404).send({ message: "User not found." });
+      }
+
+      const profileImage = user.profile_image;
+
+      // Store the profile image in Redis with an expiration time of 10 minutes
+      await redisClient.set(cacheKey, JSON.stringify(profileImage));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the profile image
+      res.status(200).json({ profile_image: profileImage });
+    });
+  } catch (error: any) {
+    console.error("Error in retrieving profile image:", error);
+    return res.status(500).send({ message: `Error in retrieving profile image: ${error.message}` });
+  }
 });
-  
+
+
 export default UsersRouter;

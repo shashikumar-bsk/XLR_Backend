@@ -180,15 +180,38 @@ AdminRouter.get('/:id', async (req: Request, res: Response) => {
 });
 // Get all admins
 AdminRouter.get('/', async (req: Request, res: Response) => {
-  try {
-    const admins = await Admin.findAll();
+  const cacheKey = 'allAdmins'; // Define a cache key for all admins
 
-    return res.status(200).send(admins);
+  try {
+    // Check if the admins data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).json(JSON.parse(cachedData));
+      }
+
+      // Fetch the admins data from the database
+      const admins = await Admin.findAll();
+
+      // Store the admins data in Redis with an expiration time of 5 minutes
+      await redisClient.set(cacheKey, JSON.stringify(admins));
+      await redisClient.expire(cacheKey, 150); // Cache expiration time in seconds (5 minutes)
+
+      // Respond with the admins data
+      res.status(200).json(admins);
+    });
   } catch (error: any) {
     console.error('Error in fetching admins:', error);
-    return res.status(500).send({ message: `Error in fetching admins: ${error.message}` });
+    res.status(500).json({ message: `Error in fetching admins: ${error.message}` });
   }
 });
+
 
 // Update admin
 AdminRouter.patch('/:id', upload.single('admin_image'), async (req: Request, res: Response) => {
@@ -543,23 +566,7 @@ AdminRouter.post('/verify-otp', async (req: Request, res: Response) => {
       error: `Failed to verify OTP: ${error.response?.data?.message || error.message}`
     });
   }
-  // Get admin by ID
-AdminRouter.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-
-    const admin = await Admin.findOne({ where: { admin_id: id } });
-
-    if (!admin) {
-      return res.status(404).send({ message: 'Admin not found.' });
-    }
-
-    return res.status(200).send(admin);
-  } catch (error: any) {
-    console.error('Error in fetching admin by ID:', error);
-    return res.status(500).send({ message: `Error in fetching admin: ${error.message}` });
-  }
-});
+  
 
 });
 

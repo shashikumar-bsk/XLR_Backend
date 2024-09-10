@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import ReceiverDetails from '../db/models/recieverdetails';
+import redisClient from '../../src/redis/redis'
 
 const ReceiverDetailsRouter = express.Router();
 
@@ -25,33 +26,78 @@ ReceiverDetailsRouter.post('/', async (req: Request, res: Response) => {
 
 // Get all receiver details
 ReceiverDetailsRouter.get('/', async (req: Request, res: Response) => {
-    try {
-        const receiverDetails = await ReceiverDetails.findAll();
+    const cacheKey = 'receiverDetails';
 
-        return res.status(200).send(receiverDetails);
+    try {
+        // Check if the receiver details data is already in Redis
+        redisClient.get(cacheKey, async (err, cachedData) => {
+            if (err) {
+                console.error('Redis error:', err);
+                return res.status(500).send({ message: 'Internal server error' });
+            }
+
+            if (cachedData) {
+                // If data is found in Redis, parse and return it
+                console.log('Cache hit, returning data from Redis');
+                return res.status(200).send(JSON.parse(cachedData));
+            }
+
+            // Fetch the receiver details data from the database
+            const receiverDetails = await ReceiverDetails.findAll();
+
+            // Store the receiver details data in Redis with an expiration time of 5 minutes
+            await redisClient.set(cacheKey, JSON.stringify(receiverDetails));
+            await redisClient.expire(cacheKey, 120);
+
+            // Respond with the receiver details data
+            res.status(200).send(receiverDetails);
+        });
     } catch (error: any) {
         console.error('Error in fetching receiver details:', error);
-        return res.status(500).send({ message: `Error in fetching receiver details: ${error.message}` });
+        res.status(500).send({ message: `Error in fetching receiver details: ${error.message}` });
     }
 });
+
 
 // Get a receiver detail by ID
 ReceiverDetailsRouter.get('/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const cacheKey = `receiverDetail:${id}`;
+
     try {
-        const { id } = req.params;
+        // Check if the receiver detail data is already in Redis
+        redisClient.get(cacheKey, async (err, cachedData) => {
+            if (err) {
+                console.error('Redis error:', err);
+                return res.status(500).send({ message: 'Internal server error' });
+            }
 
-        const receiverDetail = await ReceiverDetails.findOne({ where: { receiver_id: id } });
+            if (cachedData) {
+                // If data is found in Redis, parse and return it
+                console.log('Cache hit, returning data from Redis');
+                return res.status(200).send(JSON.parse(cachedData));
+            }
 
-        if (!receiverDetail) {
-            return res.status(404).send({ message: 'Receiver detail not found.' });
-        }
+            // Fetch the receiver detail data from the database
+            const receiverDetail = await ReceiverDetails.findOne({ where: { receiver_id: id } });
 
-        return res.status(200).send(receiverDetail);
+            if (!receiverDetail) {
+                return res.status(404).send({ message: 'Receiver detail not found.' });
+            }
+
+            // Store the receiver detail data in Redis with an expiration time of 3 minutes
+            await redisClient.set(cacheKey, JSON.stringify(receiverDetail));
+            await redisClient.expire(cacheKey, 120);
+
+            // Respond with the receiver detail data
+            res.status(200).send(receiverDetail);
+        });
     } catch (error: any) {
         console.error('Error in fetching receiver detail by ID:', error);
-        return res.status(500).send({ message: `Error in fetching receiver detail: ${error.message}` });
+        res.status(500).send({ message: `Error in fetching receiver detail: ${error.message}` });
     }
 });
+
 
 // Update a receiver detail
 ReceiverDetailsRouter.put('/:id', async (req: Request, res: Response) => {

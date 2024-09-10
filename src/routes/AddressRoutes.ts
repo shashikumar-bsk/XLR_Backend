@@ -1,6 +1,7 @@
 
 import express, { Request, Response } from 'express';
 import Address from '../db/models/Address'; 
+import redisClient from '../../src/redis/redis'
 
 const AddressRouter = express.Router();
 
@@ -79,19 +80,38 @@ AddressRouter.get('/user/:user_id', async (req: Request, res: Response) => {
       return res.status(400).send({ message: 'Invalid user ID.' });
     }
 
-    // Find addresses by user_id
-    const addresses = await Address.findAll({ where: { user_id: userId } });
-    if (addresses.length === 0) {
-      return res.status(404).send({ message: 'No addresses found for this user.' });
-    }
+    // Check if the addresses for the user are already in Redis
+    redisClient.get(`addresses:${userId}`, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error.' });
+      }
 
-    return res.status(200).send({ addresses });
+      if (cachedData) {
+        // If data is found in Redis, return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).send({ addresses: JSON.parse(cachedData) });
+      }
+
+      // If data is not in Redis, fetch from the database
+      const addresses = await Address.findAll({ where: { user_id: userId } });
+
+      if (addresses.length === 0) {
+        return res.status(404).send({ message: 'No addresses found for this user.' });
+      }
+
+      // Store the addresses in Redis with an expiration time of 180 seconds (3 minutes)
+      await redisClient.set(`addresses:${userId}`, JSON.stringify(addresses));
+      await redisClient.expire(`addresses:${userId}`, 150);
+
+      // Respond with the addresses
+      res.status(200).send({ addresses });
+    });
   } catch (error: any) {
     console.error('Error retrieving addresses by user_id:', error);
     return res.status(500).send({ message: `Error retrieving addresses: ${error.message}` });
   }
 });
-
 
 
 AddressRouter.patch('/update/:user_id', async (req: Request, res: Response) => {
@@ -126,22 +146,44 @@ AddressRouter.patch('/update/:user_id', async (req: Request, res: Response) => {
 });
 
 // Route to retrieve an address by ID
+
 AddressRouter.get('/details/:address_id', async (req: Request, res: Response) => {
   try {
     const { address_id } = req.params;
 
-    // Find address by ID
-    const address = await Address.findByPk(address_id);
-    if (!address) {
-      return res.status(404).send({ message: 'Address not found.' });
-    }
+    // Check if the address details are already in Redis
+    redisClient.get(`addressDetails:${address_id}`, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error.' });
+      }
 
-    return res.status(200).send({ address });
+      if (cachedData) {
+        // If data is found in Redis, return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).send({ address: JSON.parse(cachedData) });
+      }
+
+      // If data is not in Redis, fetch from the database
+      const address = await Address.findByPk(address_id);
+
+      if (!address) {
+        return res.status(404).send({ message: 'Address not found.' });
+      }
+
+      // Store the address details in Redis with an expiration time of 180 seconds (3 minutes)
+      await redisClient.set(`addressDetails:${address_id}`, JSON.stringify(address));
+      await redisClient.expire(`addressDetails:${address_id}`, 150);
+
+      // Respond with the address details
+      res.status(200).send({ address });
+    });
   } catch (error: any) {
     console.error('Error retrieving address details:', error);
     return res.status(500).send({ message: `Error retrieving address details: ${error.message}` });
   }
 });
+
 
 // Route to delete an address by ID
 AddressRouter.delete('/delete/:address_id', async (req: Request, res: Response) => {
@@ -163,20 +205,38 @@ AddressRouter.delete('/delete/:address_id', async (req: Request, res: Response) 
 
 AddressRouter.get('/', async (req: Request, res: Response) => {
   try {
-    // Retrieve all addresses
-    const addresses = await Address.findAll();
+    // Check if all addresses are already cached in Redis
+    redisClient.get('allAddresses', async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error.' });
+      }
 
-    if (addresses.length === 0) {
-      return res.status(404).send({ message: 'No addresses found.' });
-    }
+      if (cachedData) {
+        // If the data is found in Redis, parse it and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).json({ addresses: JSON.parse(cachedData) });
+      }
 
-    return res.status(200).send({ addresses });
+      // If data is not found in Redis, fetch it from the database
+      const addresses = await Address.findAll();
+
+      if (addresses.length === 0) {
+        return res.status(404).send({ message: 'No addresses found.' });
+      }
+
+      // Cache all addresses in Redis with a 3-minute expiration
+      await redisClient.set('allAddresses', JSON.stringify(addresses));
+      await redisClient.expire('allAddresses', 150);
+
+      // Respond with the addresses
+      return res.status(200).json({ addresses });
+    });
   } catch (error: any) {
     console.error('Error retrieving addresses:', error);
     return res.status(500).send({ message: `Error retrieving addresses: ${error.message}` });
   }
 });
-
 
 
 

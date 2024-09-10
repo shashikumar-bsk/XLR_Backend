@@ -1,5 +1,6 @@
  import express, { Request, Response } from 'express';
 import DriverEarnings from '../db/models/driverearnings';
+import redisClient from '../../src/redis/redis'
 
 const driverEarningsRouter = express.Router();
 
@@ -68,52 +69,133 @@ driverEarningsRouter.post('/', async (req: Request, res: Response) => {
 //     }
 // });
 
+
+
+
 // Get all driver earnings records
 driverEarningsRouter.get('/', async (req: Request, res: Response) => {
     try {
+      // Define the cache key for driver earnings
+      const cacheKey = 'driverEarnings:all';
+  
+      // Check if the earnings data is already in Redis
+      redisClient.get(cacheKey, async (err, cachedData) => {
+        if (err) {
+          console.error('Redis error:', err);
+          return res.status(500).send({ message: 'Internal server error.' });
+        }
+  
+        if (cachedData) {
+          // If data is found in Redis, parse and return it
+          console.log('Cache hit, returning data from Redis');
+          return res.status(200).send(JSON.parse(cachedData));
+        }
+  
+        // Fetch the driver earnings data from the database
         const driverEarnings = await DriverEarnings.findAll();
-        return res.status(200).send(driverEarnings);
+  
+        if (driverEarnings.length === 0) {
+          return res.status(404).send({ message: 'No driver earnings found.' });
+        }
+  
+        // Store the earnings data in Redis with an expiration time of 3 minutes
+        await redisClient.set(cacheKey, JSON.stringify(driverEarnings));
+        await redisClient.expire(cacheKey, 120);
+  
+        // Respond with the driver earnings data
+        res.status(200).send(driverEarnings);
+      });
     } catch (error: any) {
-        console.error('Error in fetching driver earnings:', error);
-        return res.status(500).send({ message: `Error in fetching driver earnings: ${error.message}` });
+      console.error('Error in fetching driver earnings:', error);
+      return res.status(500).send({ message: `Error in fetching driver earnings: ${error.message}` });
     }
-});
+  });
+  
 
 // Get a driver earnings record by ID
 driverEarningsRouter.get('/:id', async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
-        const driverEarnings = await DriverEarnings.findByPk(id);
-
-        if (!driverEarnings) {
-            return res.status(404).send({ message: 'Driver earnings record not found.' });
+      const { id } = req.params;
+  
+      // Define the cache key for the specific driver earnings record
+      const cacheKey = `driverEarnings:${id}`;
+  
+      // Check if the earnings data is already in Redis
+      redisClient.get(cacheKey, async (err, cachedData) => {
+        if (err) {
+          console.error('Redis error:', err);
+          return res.status(500).send({ message: 'Internal server error.' });
         }
-
-        return res.status(200).send(driverEarnings);
+  
+        if (cachedData) {
+          // If data is found in Redis, parse and return it
+          console.log('Cache hit, returning data from Redis');
+          return res.status(200).send(JSON.parse(cachedData));
+        }
+  
+        // Fetch the driver earnings data from the database
+        const driverEarnings = await DriverEarnings.findByPk(id);
+  
+        if (!driverEarnings) {
+          return res.status(404).send({ message: 'Driver earnings record not found.' });
+        }
+  
+        // Store the earnings data in Redis with an expiration time of 3 minutes
+        await redisClient.set(cacheKey, JSON.stringify(driverEarnings));
+        await redisClient.expire(cacheKey, 120);
+  
+        // Respond with the driver earnings data
+        res.status(200).send(driverEarnings);
+      });
     } catch (error: any) {
-        console.error('Error in fetching driver earnings by ID:', error);
-        return res.status(500).send({ message: `Error in fetching driver earnings: ${error.message}` });
+      console.error('Error in fetching driver earnings by ID:', error);
+      return res.status(500).send({ message: `Error in fetching driver earnings: ${error.message}` });
     }
-});
+  });
+  
 
 driverEarningsRouter.get('/driver/:driver_id', async (req: Request, res: Response) => {
     try {
-        const { driver_id } = req.params; // Use driver_id from request params
-        const driverEarnings = await DriverEarnings.findOne({ 
-            where: { driver_id: driver_id } 
-        });
-
-        if (!driverEarnings) {
-            return res.status(404).send({ message: 'Driver earnings record not found.' });
+      const { driver_id } = req.params;
+  
+      // Define the cache key for the driver earnings record
+      const cacheKey = `driverEarnings:driver:${driver_id}`;
+  
+      // Check if the earnings data is already in Redis
+      redisClient.get(cacheKey, async (err, cachedData) => {
+        if (err) {
+          console.error('Redis error:', err);
+          return res.status(500).send({ message: 'Internal server error.' });
         }
-
-        return res.status(200).send(driverEarnings);
+  
+        if (cachedData) {
+          // If data is found in Redis, parse and return it
+          console.log('Cache hit, returning data from Redis');
+          return res.status(200).send(JSON.parse(cachedData));
+        }
+  
+        // Fetch the driver earnings data from the database
+        const driverEarnings = await DriverEarnings.findOne({
+          where: { driver_id: driver_id }
+        });
+  
+        if (!driverEarnings) {
+          return res.status(404).send({ message: 'Driver earnings record not found.' });
+        }
+  
+        // Store the earnings data in Redis with an expiration time of 3 minutes
+        await redisClient.set(cacheKey, JSON.stringify(driverEarnings));
+        await redisClient.expire(cacheKey, 120);
+  
+        // Respond with the driver earnings data
+        res.status(200).send(driverEarnings);
+      });
     } catch (error: any) {
-        console.error('Error in fetching driver earnings by driver_id:', error);
-        return res.status(500).send({ message: `Error in fetching driver earnings: ${error.message}` });
+      console.error('Error in fetching driver earnings by driver_id:', error);
+      return res.status(500).send({ message: `Error in fetching driver earnings: ${error.message}` });
     }
-});
-
+  });
+  
 // Update a driver earnings record
 driverEarningsRouter.put('/:id', async (req: Request, res: Response) => {
     try {
