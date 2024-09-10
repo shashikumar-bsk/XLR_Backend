@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import Dish from '../db/models/dish'; // Adjust the path to your Dish model
 import Image from '../db/models/image'; // Adjust the path to your Image model
+import redisClient from '../../src/redis/redis'
 
 const dishRouter = express.Router();
 
@@ -30,55 +31,129 @@ dishRouter.post('/', async (req: Request, res: Response) => {
 });
 
 // Get dish by ID
+
 dishRouter.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const dish = await Dish.findByPk(id, { include: [{ model: Image, as: 'image' }] });
+    // Check if the dish is cached in Redis
+    redisClient.get(`dish:${id}`, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error.' });
+      }
 
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).send(JSON.parse(cachedData));
+      }
 
-    if (!dish) {
-      return res.status(404).send({ message: 'Dish not found.' });
-    }
+      // If data is not in Redis, fetch from the database
+      const dish = await Dish.findByPk(id, { include: [{ model: Image, as: 'image' }] });
 
-    return res.status(200).send(transformDishOutput(dish));
+      if (!dish) {
+        return res.status(404).send({ message: 'Dish not found.' });
+      }
+
+      const transformedDish = transformDishOutput(dish);
+
+      // Store the fetched dish in Redis with a 3-minute expiration
+      await redisClient.set(`dish:${id}`, JSON.stringify(transformedDish));
+      await redisClient.expire(`dish:${id}`, 120);
+
+      // Respond with the dish
+      return res.status(200).send(transformedDish);
+    });
   } catch (error: any) {
     console.error('Error in fetching dish by ID:', error);
     return res.status(500).send({ message: `Error in fetching dish: ${error.message}` });
   }
 });
 
+
 // Get all dishes
 dishRouter.get('/', async (req: Request, res: Response) => {
   try {
-    const dishes = await Dish.findAll({ include: [Image] });
+    // Check if dishes are cached in Redis
+    redisClient.get('dishes', async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error.' });
+      }
 
-    return res.status(200).send(dishes.map(transformDishOutput));
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).send(JSON.parse(cachedData));
+      }
+
+      // If data is not in Redis, fetch from the database
+      const dishes = await Dish.findAll({ include: [Image] });
+
+      if (!dishes.length) {
+        return res.status(404).send({ message: 'No dishes found.' });
+      }
+
+      const transformedDishes = dishes.map(transformDishOutput);
+
+      // Store the fetched dishes in Redis with a 3-minute expiration
+      await redisClient.set('dishes', JSON.stringify(transformedDishes));
+      await redisClient.expire('dishes', 120);
+
+      // Respond with the dishes
+      return res.status(200).send(transformedDishes);
+    });
   } catch (error: any) {
     console.error('Error in fetching dishes:', error);
     return res.status(500).send({ message: `Error in fetching dishes: ${error.message}` });
   }
 });
+
+
 // Get all dishes by restaurant_id
 dishRouter.get('/restaurant/:restaurant_id', async (req: Request, res: Response) => {
+  const { restaurant_id } = req.params;
+
   try {
-    const { restaurant_id } = req.params;
+    // Check if dishes for the restaurant are cached in Redis
+    redisClient.get(`dishesByRestaurant:${restaurant_id}`, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error.' });
+      }
 
-    const dishes = await Dish.findAll({
-      where: { restaurant_id },
-      include: [{ model: Image, as: 'image' }],
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).send(JSON.parse(cachedData));
+      }
+
+      // If data is not in Redis, fetch from the database
+      const dishes = await Dish.findAll({
+        where: { restaurant_id },
+        include: [{ model: Image, as: 'image' }],
+      });
+
+      if (!dishes.length) {
+        return res.status(404).send({ message: 'No dishes found for this restaurant.' });
+      }
+
+      const transformedDishes = dishes.map(transformDishOutput);
+
+      // Store the fetched dishes in Redis with a 3-minute expiration
+      await redisClient.set(`dishesByRestaurant:${restaurant_id}`, JSON.stringify(transformedDishes));
+      await redisClient.expire(`dishesByRestaurant:${restaurant_id}`, 120);
+
+      // Respond with the dishes
+      return res.status(200).send(transformedDishes);
     });
-
-    if (dishes.length === 0) {
-      return res.status(404).send({ message: 'No dishes found for this restaurant.' });
-    }
-
-    return res.status(200).send(dishes.map(transformDishOutput));
   } catch (error: any) {
     console.error('Error in fetching dishes by restaurant ID:', error);
     return res.status(500).send({ message: `Error in fetching dishes: ${error.message}` });
   }
 });
+
 
 // Update dish
 dishRouter.patch('/:id', async (req: Request, res: Response) => {

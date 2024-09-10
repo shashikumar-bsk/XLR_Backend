@@ -3,6 +3,7 @@ import AddToCart from '../db/models/add_to_cart'; // Update the path as needed
 import User from '../db/models/users'; // Update the path as needed
 import Product from '../db/models/product'; // Update the path as needed
 import Promotion from '../db/models/promotions' // Update the path as needed
+import redisClient from '../../src/redis/redis'
 
 const cartRouter = express.Router();
 
@@ -208,36 +209,54 @@ cartRouter.delete('/:cart_id', async (req, res) => {
         res.status(500).json({ message: 'Error removing item from cart' });
     }
 });
-
 // Get specific details of items in the cart for a user and calculate total payment
 cartRouter.get('/:user_id', async (req, res) => {
     const { user_id } = req.params;
 
     try {
-        // Fetch specific details from the cart, including promotion_id
-        const items = await AddToCart.findAll({
-            attributes: ['cart_id', 'product_id', 'quantity', 'total_price', 'promotion_id'],
-            where: { user_id, is_deleted: false }
-        });
+        // Check if cart data is already in Redis
+        redisClient.get(`cart:${user_id}`, async (err, cachedData) => {
+            if (err) {
+                console.error('Redis error:', err);
+                return res.status(500).json({ message: 'Internal server error.' });
+            }
 
-        if (!items.length) {
-            return res.status(404).json({ message: 'No items found in cart' });
-        }
+            if (cachedData) {
+                // If data is found in Redis, return it
+                console.log('Cache hit, returning data from Redis');
+                return res.status(200).json(JSON.parse(cachedData));
+            }
 
-        // Calculate the total payment
-        const totalPayment = items.reduce((sum, item) => {
-        // Assuming total_price is already included in the item
-            return sum + (item.total_price ?? 0); // Use 0 if total_price is undefined
-        }, 0);
+            // If data is not in Redis, fetch from the database
+            const items = await AddToCart.findAll({
+                attributes: ['cart_id', 'product_id', 'quantity', 'total_price', 'promotion_id'],
+                where: { user_id, is_deleted: false }
+            });
 
-        // Respond with specific details and total payment
-        res.status(200).json({ 
-            user_id,
-            items,
-            total_payment: totalPayment 
+            if (!items.length) {
+                return res.status(404).json({ message: 'No items found in cart' });
+            }
+
+            // Calculate the total payment
+            const totalPayment = items.reduce((sum, item) => {
+                return sum + (item.total_price ?? 0); // Use 0 if total_price is undefined
+            }, 0);
+
+            const responseData = {
+                user_id,
+                items,
+                total_payment: totalPayment
+            };
+
+            // Store the data in Redis with an expiration time of 180 seconds (3 minutes)
+            await redisClient.set(`cart:${user_id}`, JSON.stringify(responseData));
+            await redisClient.expire(`cart:${user_id}`, 120);
+
+            // Respond with the data fetched from the database
+            res.status(200).json(responseData);
         });
     } catch (error) {
-        console.error(error);
+        console.error('Error retrieving cart items:', error);
         res.status(500).json({ message: 'Error retrieving cart items' });
     }
 });
@@ -246,20 +265,40 @@ cartRouter.get('/total/:user_id', async (req, res) => {
     const { user_id } = req.params;
 
     try {
-        const items = await AddToCart.findAll({
-            where: { user_id, is_deleted: false }
+        // Check if total payment is already in Redis
+        redisClient.get(`cartTotal:${user_id}`, async (err, cachedData) => {
+            if (err) {
+                console.error('Redis error:', err);
+                return res.status(500).json({ message: 'Internal server error.' });
+            }
+
+            if (cachedData) {
+                // If data is found in Redis, return it
+                console.log('Cache hit, returning data from Redis');
+                return res.status(200).json({ total_payment: JSON.parse(cachedData) });
+            }
+
+            // If data is not in Redis, fetch from the database
+            const items = await AddToCart.findAll({
+                where: { user_id, is_deleted: false }
+            });
+
+            if (!items.length) {
+                return res.status(404).json({ message: 'No items found in cart' });
+            }
+
+            // Calculate the total amount
+            const total_payment = items.reduce((sum, item) => sum + item.total_price, 0);
+
+            // Store the total payment in Redis with an expiration time of 180 seconds (3 minutes)
+            await redisClient.set(`cartTotal:${user_id}`, JSON.stringify(total_payment));
+            await redisClient.expire(`cartTotal:${user_id}`, 180);
+
+            // Respond with the total payment
+            res.status(200).json({ total_payment });
         });
-
-        if (!items.length) {
-            return res.status(404).json({ message: 'No items found in cart' });
-        }
-
-        // Calculate the total amount
-        const total_payment = items.reduce((sum, item) => sum + item.total_price, 0);
-
-        res.status(200).json({ total_payment });
     } catch (error) {
-        console.error(error);
+        console.error('Error retrieving cart total payment:', error);
         res.status(500).json({ message: 'Error retrieving cart total payment' });
     }
 });

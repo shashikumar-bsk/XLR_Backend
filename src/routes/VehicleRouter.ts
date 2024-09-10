@@ -4,6 +4,7 @@ import multer from 'multer';
 import multerS3 from 'multer-s3';
 import { S3Client } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
+import redisClient from '../../src/redis/redis'
 
 dotenv.config();
 
@@ -93,9 +94,32 @@ VehicleRouter.post('/post/create', upload.single('image'), async (req: Request, 
 
 // Get all vehicles
 VehicleRouter.get('/vehicles', async (req: Request, res: Response) => {
+  const cacheKey = 'vehicles'; // Define a cache key for the vehicles list
+
   try {
-    const vehicles = await Vehicle.findAll();
-    res.status(200).json(vehicles);
+    // Check if the vehicles data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).json(JSON.parse(cachedData));
+      }
+
+      // Fetch the vehicles data from the database
+      const vehicles = await Vehicle.findAll();
+
+      // Store the vehicles data in Redis with an expiration time of 10 minutes
+      await redisClient.set(cacheKey, JSON.stringify(vehicles));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the vehicles data
+      res.status(200).json(vehicles);
+    });
   } catch (error) {
     if (isError(error)) {
       res.status(500).json({ error: error.message });
@@ -105,16 +129,40 @@ VehicleRouter.get('/vehicles', async (req: Request, res: Response) => {
   }
 });
 
+
 // Get a vehicle by ID
 VehicleRouter.get('/vehicles/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const cacheKey = `vehicle:${id}`; // Define a cache key for the specific vehicle
+
   try {
-    const { id } = req.params;
-    const vehicle = await Vehicle.findByPk(id);
-    if (vehicle) {
-      res.status(200).json(vehicle);
-    } else {
-      res.status(404).json({ error: 'Vehicle not found' });
-    }
+    // Check if the vehicle data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).json(JSON.parse(cachedData));
+      }
+
+      // Fetch the vehicle data from the database
+      const vehicle = await Vehicle.findByPk(id);
+      
+      if (vehicle) {
+        // Store the vehicle data in Redis with an expiration time of 10 minutes
+        await redisClient.set(cacheKey, JSON.stringify(vehicle));
+        await redisClient.expire(cacheKey, 120);
+
+        // Respond with the vehicle data
+        res.status(200).json(vehicle);
+      } else {
+        res.status(404).json({ error: 'Vehicle not found' });
+      }
+    });
   } catch (error) {
     if (isError(error)) {
       res.status(500).json({ error: error.message });
@@ -123,6 +171,7 @@ VehicleRouter.get('/vehicles/:id', async (req: Request, res: Response) => {
     }
   }
 });
+
 
 // Update a vehicle by ID
 VehicleRouter.put('/vehicles/:id', async (req: Request, res: Response) => {
