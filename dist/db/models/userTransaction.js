@@ -60,5 +60,12 @@ Transaction.init({
     sequelize: config_1.default,
     tableName: 'userTransactions',
     timestamps: true,
+    indexes: [
+        {
+            unique: false,
+            name: 'transactionUserId_index',
+            fields: ['user_id']
+        }
+    ]
 });
 exports.default = Transaction;

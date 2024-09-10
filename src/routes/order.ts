@@ -49,7 +49,7 @@ orderRouter.post('/create', async (req: Request, res: Response) => {
         price: dish.price,
         is_deleted: false, // Add the is_deleted field with a default value
       });
-    }
+    } 
 
     // Clear the user's cart after the order is placed
     await Cart.destroy({ where: { user_id } });

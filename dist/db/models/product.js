@@ -49,6 +49,10 @@ Product.init({
         type: sequelize_1.DataTypes.TEXT,
         allowNull: true,
     },
+    quantity: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: false,
+    },
     price: {
         type: sequelize_1.DataTypes.DECIMAL(10, 2),
         allowNull: false,
@@ -66,5 +70,15 @@ Product.init({
     modelName: 'Product',
     tableName: 'products',
     timestamps: true,
+    indexes: [
+        {
+            unique: true,
+            name: 'productId_index',
+            fields: ['product_id']
+        }
+    ]
 });
+Product.belongsTo(SubCategory_1.default, { foreignKey: 'sub_category_id', as: 'subCategory' });
+Product.belongsTo(brand_1.default, { foreignKey: 'brand_id', as: 'brand' });
+Product.belongsTo(image_1.default, { foreignKey: 'image_id', as: 'image' });
 exports.default = Product;

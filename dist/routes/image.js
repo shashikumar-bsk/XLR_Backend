@@ -22,6 +22,7 @@ const product_1 = __importDefault(require("../db/models/product"));
 const Category_1 = __importDefault(require("../db/models/Category"));
 const SubCategory_1 = __importDefault(require("../db/models/SubCategory"));
 const brand_1 = __importDefault(require("../db/models/brand"));
+const restaurant_1 = __importDefault(require("../db/models/restaurant"));
 dotenv_1.default.config();
 const ImageRouter = express_1.default.Router();
 // Ensure all environment variables are defined
@@ -92,7 +93,7 @@ ImageRouter.post('/upload', upload.single('image'), (req, res) => __awaiter(void
             }
         }
         if (entity_type === 'restaurant') {
-            const restaurantExists = yield brand_1.default.findByPk(entity_id);
+            const restaurantExists = yield restaurant_1.default.findByPk(entity_id);
             if (!restaurantExists) {
                 return res.status(404).json({ success: false, error: 'restaurant not found' });
             }

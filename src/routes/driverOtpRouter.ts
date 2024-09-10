@@ -13,13 +13,13 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const APP_ID = process.env.APP_ID;
 const JWT_SECRET = process.env.JWT_SECRET;
 
+const service_id=1;
+
 if (!CLIENT_ID || !CLIENT_SECRET || !APP_ID || !JWT_SECRET) {
   throw new Error('CLIENT_ID, CLIENT_SECRET, APP_ID, or JWT_SECRET is not defined in environment variables');
 }
 
 // Temporary storage for demonstration purposes
-const otpStorage: { [key: string]: { phone: string; orderId: string } } = {};
-
 DriverOTPRouter.post('/send-otp', async (req: Request, res: Response) => {
   const { phone } = req.body;
 
@@ -27,82 +27,98 @@ DriverOTPRouter.post('/send-otp', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Phone number is required' });
   }
 
+  // Sanitize and validate phone number
   const sanitizedPhone = phone.replace(/\D/g, '');
+  if (sanitizedPhone.length < 10 || sanitizedPhone.length > 15) {
+    return res.status(400).json({ error: 'Invalid phone number format' });
+  }
 
   try {
     const response = await axios.post('https://auth.otpless.app/auth/otp/v1/send', {
       phoneNumber: 91+sanitizedPhone,
       otpLength: 4,
       channel: 'WHATSAPP',
-      expiry: 600,
+      expiry: 600
     }, {
       headers: {
         'Content-Type': 'application/json',
         'clientId': CLIENT_ID,
         'clientSecret': CLIENT_SECRET,
-        'appId': APP_ID,
+        'appId': APP_ID
       }
     });
 
-    if (response.data.orderId) {
-      // Store phone and orderId
-      otpStorage[sanitizedPhone] = { phone: sanitizedPhone, orderId: response.data.orderId };
+    console.log('OTP send response:', response.data); // Log the full response for debugging
 
-      res.json({ message: 'OTP sent successfully' });
+    if (response.data.orderId) { // Check if orderId is present
+      // Save OTP orderId to database if needed
+      res.json({ message: 'OTP sent successfully', orderId: response.data.orderId });
     } else {
       throw new Error(`Failed to send OTP: ${response.data.message || 'Unknown error'}`);
     }
   } catch (error: any) {
+    console.error('Error sending OTP:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
-      error: `Failed to send OTP: ${error.response?.data?.message || error.message}`,
+      error: `Failed to send OTP: ${error.response?.data?.message || error.message}`
     });
   }
 });
 
-DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
-  const { otp } = req.body;
 
-  // Assuming phone is known from the session or other storage
-  const phone = Object.keys(otpStorage)[0]; // In production, use a better method to retrieve the correct phone number
-  const { orderId } = otpStorage[phone];
+
+DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
+  const { phone, otp, orderId } = req.body;
+
+  if (!phone || !otp || !orderId) {
+    return res.status(400).json({ error: 'Phone number, OTP, and orderId are required' });
+  }
+
+  // Sanitize and validate phone number
+  const sanitizedPhone = phone.replace(/\D/g, '');
+  if (sanitizedPhone.length < 10 || sanitizedPhone.length > 15) {
+    return res.status(400).json({ error: 'Invalid phone number format' });
+  }
 
   try {
     const response = await axios.post('https://auth.otpless.app/auth/otp/v1/verify', {
-      phoneNumber: 91+phone,
+      phoneNumber: 91+sanitizedPhone,
       otp,
-      orderId,
+      orderId
     }, {
       headers: {
         'Content-Type': 'application/json',
         'clientId': CLIENT_ID,
         'clientSecret': CLIENT_SECRET,
-        'appId': APP_ID,
+        'appId': APP_ID
       }
     });
 
+    console.log('OTP verify response:', response.data);
+
     if (response.data.isOTPVerified) {
-      const driver = await Driver.findOne({ where: { phone, is_deleted: false } });
+      // Fetch user by phone number
+      const user = await Driver.findOne({ where: { phone: sanitizedPhone } });
 
-      if (driver) {
+      if (user) {
+        // Generate JWT token
         const token = jwt.sign(
-          { id: driver.id, phone },
-          JWT_SECRET,
-          { expiresIn: '1h' }
+          { id: user.driver_id, phone: sanitizedPhone ,service_id}, // Include user ID in payload
+          JWT_SECRET, 
+          { expiresIn: '12h' }
         );
-        console.log('Generated JWT Token:', token); // Ensure this is in the correct scope
-
-    // res.json({ message: 'OTP Verified Successfully!', token });
+        console.log('JWT Token:', token); // Log the token
 
         res.json({ message: 'OTP Verified Successfully!', token });
       } else {
-        res.status(404).json({ error: 'Driver not found or inactive' });
+        res.status(404).json({ error: 'User not found' });
       }
     } else {
-      res.status(400).json({ error: 'Invalid OTP' });
+      res.status(400).json({ error: 'Invalid OTP or phone number' });
     }
   } catch (error: any) {
+    console.error('Error verifying OTP:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
-      error: `Failed to verify OTP: ${error.response?.data?.message || error.message}`,
+      error: `Failed to verify OTP: ${error.response?.data?.message || error.message}`
     });
   }
 });

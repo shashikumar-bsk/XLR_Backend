@@ -158,6 +158,33 @@ RideRequestRouter.get('/ride-requests/completed', (req, res) => __awaiter(void 0
         res.status(500).json({ error: 'Internal Server Error' });
     }
 }));
+RideRequestRouter.get('/driver/:driver_id/completed-orders', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { driver_id } = req.params;
+        const completedOrdersCount = yield riderequest_1.default.count({
+            where: { driver_id, status: 'Completed', is_deleted: false }
+        });
+        return res.status(200).json({ completedOrdersCount });
+    }
+    catch (error) {
+        console.error('Error in fetching completed orders count:', error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+}));
+// Route for fetching missed orders by driver ID
+RideRequestRouter.get('/driver/:driver_id/missed-orders', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { driver_id } = req.params;
+        const MissedOrdersCount = yield riderequest_1.default.count({
+            where: { driver_id, status: 'rejected', is_deleted: false }
+        });
+        return res.status(200).json({ MissedOrdersCount });
+    }
+    catch (error) {
+        console.error('Error in fetching completed orders count:', error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    }
+}));
 // Get orders for a specific user
 RideRequestRouter.get('/user/:user_id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
