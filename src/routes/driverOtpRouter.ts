@@ -3,7 +3,6 @@ import Driver from '../db/models/driver';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
-import redisClient from '../../src/redis/redis'
 
 dotenv.config();
 const DriverOTPRouter = express.Router();
@@ -66,6 +65,63 @@ DriverOTPRouter.post('/send-otp', async (req: Request, res: Response) => {
 
 
 
+// DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
+//   const { phone, otp, orderId } = req.body;
+
+//   if (!phone || !otp || !orderId) {
+//     return res.status(400).json({ error: 'Phone number, OTP, and orderId are required' });
+//   }
+
+//   // Sanitize and validate phone number
+//   const sanitizedPhone = phone.replace(/\D/g, '');
+//   if (sanitizedPhone.length < 10 || sanitizedPhone.length > 15) {
+//     return res.status(400).json({ error: 'Invalid phone number format' });
+//   }
+
+//   try {
+//     const response = await axios.post('https://auth.otpless.app/auth/otp/v1/verify', {
+//       phoneNumber: 91+sanitizedPhone,
+//       otp,
+//       orderId
+//     }, {
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'clientId': CLIENT_ID,
+//         'clientSecret': CLIENT_SECRET,
+//         'appId': APP_ID
+//       }
+//     });
+
+//     console.log('OTP verify response:', response.data);
+
+//     if (response.data.isOTPVerified) {
+//       // Fetch user by phone number
+//       const user = await Driver.findOne({ where: { phone: sanitizedPhone } });
+
+//       if (user) {
+//         // Generate JWT token
+//         const token = jwt.sign(
+//           { id: user.driver_id, phone: sanitizedPhone ,service_id}, // Include user ID in payload
+//           JWT_SECRET, 
+//           { expiresIn: '12h' }
+//         );
+//         console.log('JWT Token:', token); // Log the token
+
+//         res.json({ message: 'OTP Verified Successfully!', token });
+//       } else {
+//         res.status(404).json({ error: 'User not found' });
+//       }
+//     } else {
+//       res.status(400).json({ error: 'Invalid OTP or phone number' });
+//     }
+//   } catch (error: any) {
+//     console.error('Error verifying OTP:', error.response?.data || error.message);
+//     res.status(error.response?.status || 500).json({
+//       error: `Failed to verify OTP: ${error.response?.data?.message || error.message}`
+//     });
+//   }
+// });
+
 DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
   const { phone, otp, orderId } = req.body;
 
@@ -80,36 +136,35 @@ DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
   }
 
   try {
+    // Verify the OTP using an external service
     const response = await axios.post('https://auth.otpless.app/auth/otp/v1/verify', {
       phoneNumber: 91+sanitizedPhone,
       otp,
-      orderId
+      orderId,
     }, {
       headers: {
         'Content-Type': 'application/json',
         'clientId': CLIENT_ID,
         'clientSecret': CLIENT_SECRET,
-        'appId': APP_ID
+        'appId': APP_ID,
       }
     });
-
     console.log('OTP verify response:', response.data);
 
     if (response.data.isOTPVerified) {
-      // Fetch user by phone number
-      const user = await Driver.findOne({ where: { phone: sanitizedPhone } });
+      // Check if the driver exists
+      const driver = await Driver.findOne({ where: { phone: sanitizedPhone } });
 
-      if (user) {
-        // Generate JWT token
+      if (driver) {
+        // Generate a JWT token with driver ID
         const token = jwt.sign(
-          { id: user.driver_id, phone: sanitizedPhone ,service_id}, // Include user ID in payload
-          JWT_SECRET, 
+          { id: driver.driver_id, phone: sanitizedPhone }, // Include user ID in payload
+          JWT_SECRET,
           { expiresIn: '12h' }
         );
-        console.log('JWT Token:', token); // Log the token
-
-        res.json({ message: 'OTP Verified Successfully!', token });
-      } else {
+        console.log('JWT Token:', token);
+        return res.json({ message: 'OTP Verified Successfully!', token });
+      }else {
         res.status(404).json({ error: 'User not found' });
       }
     } else {
@@ -124,50 +179,25 @@ DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
 });
 
 
-
 DriverOTPRouter.get('/check-driver', async (req: Request, res: Response) => {
-  const phone = req.query.phone as string; // Ensure phone is treated as a string
+  const phone = req.query.phone as string; // Ensure phoneNumber is treated as a string
 
   if (!phone) {
     return res.status(400).json({ error: 'Phone number is required' });
   }
 
-  // Define the cache key for the driver
-  const cacheKey = `driver:phone:${phone}`;
-
   try {
-    // Check if the driver data is already in Redis
-    redisClient.get(cacheKey, async (err, cachedData) => {
-      if (err) {
-        console.error('Redis error:', err);
-        return res.status(500).json({ error: 'Internal server error' });
-      }
+    const driver = await Driver.findOne({ where: { phone: phone, is_deleted: false } });
 
-      if (cachedData) {
-        // If data is found in Redis, parse and return it
-        console.log('Cache hit, returning data from Redis');
-        return res.json(JSON.parse(cachedData));
-      }
+    if (!driver) {
+      return res.status(404).json({ error: 'Driver not found or inactive' });
+    }
 
-      // Fetch the driver data from the database
-      const driver = await Driver.findOne({ where: { phone: phone, is_deleted: false } });
-
-      if (!driver) {
-        return res.status(404).json({ error: 'Driver not found or inactive' });
-      }
-
-      // Store the driver data in Redis with an expiration time of 3 minutes
-      await redisClient.set(cacheKey, JSON.stringify(driver));
-      await redisClient.expire(cacheKey, 120);
-
-      // Respond with the driver data
-      res.json(driver);
-    });
+    res.json(driver);
   } catch (error) {
     console.error('Error fetching driver details:', error);
     res.status(500).json({ error: 'Failed to fetch driver details' });
   }
 });
-
 
 export default DriverOTPRouter;
