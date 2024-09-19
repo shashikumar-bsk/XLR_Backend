@@ -1,26 +1,24 @@
 // kafkaProducer.ts
-import kafka from './kafka';
+import { Kafka, logLevel } from 'kafkajs';
+
+const kafka = new Kafka({
+  clientId: 'ride-booking-app',
+  brokers: ['localhost:9092'],
+  logLevel: logLevel.ERROR,
+});
 
 const producer = kafka.producer();
 
-const connectProducer = async () => {
+export const connectProducer = async () => {
   await producer.connect();
+  console.log('Kafka Producer connected');
 };
 
-const disconnectProducer = async () => {
-  await producer.disconnect();
+export const sendMessage = async (topic: string, message: any) => {
+  await producer.send({
+    topic,
+    messages: [{ value: JSON.stringify(message) }],
+  });
 };
 
-const sendMessage = async (topic: string, message: any) => {
-  try {
-    await producer.send({
-      topic,
-      messages: [{ value: JSON.stringify(message) }],
-    });
-    console.log(`Message sent to Kafka topic '${topic}':`, message);
-  } catch (error) {
-    console.error('Error sending message to Kafka:', error);
-  }
-};
-
-export { connectProducer, disconnectProducer, sendMessage };
+export default producer;

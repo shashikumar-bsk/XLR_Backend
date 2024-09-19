@@ -127,6 +127,62 @@ UsersRouter.get("/:user_id/profile_image", async (req: Request, res: Response) =
     return res.status(500).send({ message: `Error in retrieving profile image: ${error.message}` });
   }
 });
+// Route to update user's profile image
+                  UsersRouter.post("/:user_id/profile_image", upload.single("profile_image"), async (req: Request, res: Response) => {
+                          try {
+                            const { user_id } = req.params;
+                            const profile_image = (req.file as any)?.location;
+
+                            if (!profile_image) {
+                              return res.status(400).send({ message: "No profile image uploaded." });
+                            }
+
+                            // Find the user by ID
+                            const user = await User.findByPk(user_id);
+
+                            if (!user) {
+                              return res.status(404).send({ message: "User not found." });
+                            }
+
+                            // Update the user's profile image
+                            user.profile_image = profile_image;
+                            await user.save();
+
+                            return res.status(200).send({ message: "Profile image updated successfully", profile_image });
+                          } catch (error: any) {
+                            console.error("Error in updating profile image:", error);
+                            return res.status(500).send({ message: `Error in updating profile image: ${error.message}` });
+                          }
+                        });
 
 
+                        UsersRouter.patch("/:user_id/profile-image", upload.single("profile_image"), async (req: Request, res: Response) => {
+                          try {
+                            const { user_id } = req.params;
+                            const profile_image = (req.file as any)?.location;
+                        
+                            // Check if the image is provided
+                            if (!profile_image) {
+                              return res.status(400).send({ message: "Profile image is required." });
+                            }
+                        
+                            // Find the user by ID
+                            const user = await User.findByPk(user_id);
+                            if (!user) {
+                              return res.status(404).send({ message: "User not found." });
+                            }
+                        
+                            // Update only the profile image
+                            user.profile_image = profile_image;
+                        
+                            // Save the updated user to the database
+                            await user.save();
+                        
+                            return res.status(200).send({ message: "Profile image updated successfully", data: user });
+                          } catch (error: any) {
+                            console.error("Error in updating profile image:", error);
+                            return res.status(500).send({ message: `Error in updating profile image: ${error.message}` });
+                          }
+                        });
+                        
 export default UsersRouter;
