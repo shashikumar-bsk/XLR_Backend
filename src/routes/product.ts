@@ -4,6 +4,7 @@ import Product from '../db/models/product'; // Adjust the path to your Product m
 import SubCategory from '../db/models/SubCategory';
 import Brand from '../db/models/brand';
 import Image from '../db/models/image';
+import redisClient from '../../src/redis/redis'
 
 const productRouter = express.Router();
 
@@ -57,44 +58,92 @@ productRouter.post('/', async (req: Request, res: Response, next: NextFunction) 
 
 // Get all products with optional category filter
 productRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
-    const { sub_category_id} = req.query;
-
+    const { sub_category_id } = req.query;
+    const cacheKey = `products:${sub_category_id || 'all'}`;
+  
     try {
+      // Check if the products data is already in Redis
+      redisClient.get(cacheKey, async (err, cachedData) => {
+        if (err) {
+          console.error('Redis error:', err);
+          return next(err); // Pass the error to the next middleware
+        }
+  
+        if (cachedData) {
+          // If data is found in Redis, parse and return it
+          console.log('Cache hit, returning data from Redis');
+          return res.json(JSON.parse(cachedData));
+        }
+  
+        // Fetch the products data from the database
         const products = await Product.findAll({
-            include: [
-                { model: SubCategory, as: 'subCategory' },
-                { model: Brand, as: 'brand' },
-                { model: Image, as: 'image' }
-            ],
-            where: sub_category_id ? { '$subCategory.sub_category_id$': sub_category_id } : undefined // Only apply filter if categoryId is provided
+          include: [
+            { model: SubCategory, as: 'subCategory' },
+            { model: Brand, as: 'brand' },
+            { model: Image, as: 'image' }
+          ],
+          where: sub_category_id ? { '$subCategory.sub_category_id$': sub_category_id } : undefined // Only apply filter if sub_category_id is provided
         });
+  
+        // Store the products data in Redis with an expiration time of 5 minutes
+        await redisClient.set(cacheKey, JSON.stringify(products));
+        await redisClient.expire(cacheKey, 200);
+  
+        // Respond with the products data
         res.status(200).json(products);
+      });
     } catch (error) {
-        next(error);
+      console.error('Error fetching products:', error);
+      next(error); // Pass the error to the next middleware
     }
-});
+  });
+  
 
 // Get a product by ID
 productRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+    const { id } = req.params;
+    const cacheKey = `product:${id}`;
+  
     try {
-        const { id } = req.params;
-        const product = await Product.findByPk(id, {
-            include: [
-                { model: SubCategory, as: 'subCategory' },
-                { model: Brand, as: 'brand' },
-                { model: Image, as: 'image' }
-            ]
-        });
-
-        if (product) {
-            res.status(200).json(product);
-        } else {
-            res.status(404).json({ message: 'Product not found' });
+      // Check if the product data is already in Redis
+      redisClient.get(cacheKey, async (err, cachedData) => {
+        if (err) {
+          console.error('Redis error:', err);
+          return next(err); // Pass the error to the next middleware
         }
+  
+        if (cachedData) {
+          // If data is found in Redis, parse and return it
+          console.log('Cache hit, returning data from Redis');
+          return res.json(JSON.parse(cachedData));
+        }
+  
+        // Fetch the product data from the database
+        const product = await Product.findByPk(id, {
+          include: [
+            { model: SubCategory, as: 'subCategory' },
+            { model: Brand, as: 'brand' },
+            { model: Image, as: 'image' }
+          ]
+        });
+  
+        if (!product) {
+          return res.status(404).json({ message: 'Product not found' });
+        }
+  
+        // Store the product data in Redis with an expiration time of 5 minutes
+        await redisClient.set(cacheKey, JSON.stringify(product));
+        await redisClient.expire(cacheKey, 200);
+  
+        // Respond with the product data
+        res.status(200).json(product);
+      });
     } catch (error) {
-        next(error);
+      console.error('Error fetching product:', error);
+      next(error); // Pass the error to the next middleware
     }
-});
+  });
+  
 
 // Update a product by ID
 productRouter.put('/:id', async (req: Request, res: Response, next: NextFunction) => {

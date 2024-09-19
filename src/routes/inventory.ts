@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import Inventory from '../db/models/inventory'; // Adjust the path to your Inventory model
 import Product from '../db/models/product'; // Adjust the path to your Product model
+import redisClient from '../../src/redis/redis'
 
 const inventoryRouter = express.Router();
 
@@ -29,42 +30,92 @@ inventoryRouter.post('/', async (req: Request, res: Response) => {
 
 // Get all inventories
 inventoryRouter.get('/', async (req: Request, res: Response) => {
+    const cacheKey = 'all_inventories';
+  
     try {
+      // Check if the inventories data is already in Redis
+      redisClient.get(cacheKey, async (err, cachedData) => {
+        if (err) {
+          console.error('Redis error:', err);
+          return res.status(500).json({ error: 'Internal server error' });
+        }
+  
+        if (cachedData) {
+          // If data is found in Redis, parse and return it
+          console.log('Cache hit, returning data from Redis');
+          return res.json(JSON.parse(cachedData));
+        }
+  
+        // Fetch the inventories data from the database
         const inventories = await Inventory.findAll({
-            include: {
-                model: Product,
-                attributes: ['id', 'name'] // Adjust attributes as needed
-            }
+          include: {
+            model: Product,
+            attributes: ['id', 'name'] // Adjust attributes as needed
+          }
         });
+  
         const inventoryOutput = inventories.map(inventory => inventory.get({ plain: true }));
+  
+        // Store the inventories data in Redis with an expiration time of 3 minutes
+        await redisClient.set(cacheKey, JSON.stringify(inventoryOutput));
+        await redisClient.expire(cacheKey, 120);
+  
+        // Respond with the inventories data
         res.status(200).json(inventoryOutput);
+      });
     } catch (error) {
-        console.error('Error fetching inventories:', error);
-        res.status(500).json({ error: 'Failed to fetch inventories' });
+      console.error('Error fetching inventories:', error);
+      res.status(500).json({ error: 'Failed to fetch inventories' });
     }
-});
+  });
+  
 
 // Get an inventory by ID
 inventoryRouter.get('/:inventory_id', async (req: Request, res: Response) => {
+    const { inventory_id } = req.params;
+    const cacheKey = `inventory:${inventory_id}`;
+  
     try {
-        const { inventory_id } = req.params;
-        const inventory = await Inventory.findByPk(inventory_id, {
-            include: {
-                model: Product,
-                attributes: ['id', 'name'] // Adjust attributes as needed
-            }
-        });
-        if (inventory) {
-            const inventoryOutput = inventory.get({ plain: true });
-            res.status(200).json(inventoryOutput);
-        } else {
-            res.status(404).json({ error: 'Inventory not found' });
+      // Check if the inventory data is already in Redis
+      redisClient.get(cacheKey, async (err, cachedData) => {
+        if (err) {
+          console.error('Redis error:', err);
+          return res.status(500).json({ error: 'Internal server error' });
         }
+  
+        if (cachedData) {
+          // If data is found in Redis, parse and return it
+          console.log('Cache hit, returning data from Redis');
+          return res.json(JSON.parse(cachedData));
+        }
+  
+        // Fetch the inventory data from the database
+        const inventory = await Inventory.findByPk(inventory_id, {
+          include: {
+            model: Product,
+            attributes: ['id', 'name'] // Adjust attributes as needed
+          }
+        });
+  
+        if (inventory) {
+          const inventoryOutput = inventory.get({ plain: true });
+  
+          // Store the inventory data in Redis with an expiration time of 3 minutes
+          await redisClient.set(cacheKey, JSON.stringify(inventoryOutput));
+          await redisClient.expire(cacheKey, 120);
+  
+          // Respond with the inventory data
+          res.status(200).json(inventoryOutput);
+        } else {
+          res.status(404).json({ error: 'Inventory not found' });
+        }
+      });
     } catch (error) {
-        console.error('Error fetching inventory:', error);
-        res.status(500).json({ error: 'Failed to fetch inventory' });
+      console.error('Error fetching inventory:', error);
+      res.status(500).json({ error: 'Failed to fetch inventory' });
     }
-});
+  });
+  
 
 // Update an inventory by ID
 inventoryRouter.patch('/:inventory_id', async (req: Request, res: Response) => {
