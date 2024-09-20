@@ -30,7 +30,7 @@ OTPRouter.post('/send-otp', async (req: Request, res: Response) => {
 
   // Sanitize and validate phone number
   const sanitizedPhone = phone.replace(/\D/g, '');
-  if (sanitizedPhone.length < 10 || sanitizedPhone.length > 10) {
+  if (sanitizedPhone.length < 10 || sanitizedPhone.length > 15) {
     return res.status(400).json({ error: 'Invalid phone number format' });
   }
 
@@ -60,7 +60,7 @@ OTPRouter.post('/send-otp', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error sending OTP:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
-      error: `Failed to send OTP: ${error.response?.data?.message || 'Server error'}`,
+      error: `Failed to send OTP: ${error.response?.data?.message || error.message}`
     });
   }
 });

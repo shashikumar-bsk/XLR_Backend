@@ -39,10 +39,10 @@ RestaurantCartRouter.get('/cart-items/:user_id', async (req: Request, res: Respo
           await item.calculateTotalPrice(); // Ensure total price is calculated
           return item.toJSON();
         }));
-    
+  
         // Store the fetched cart items in Redis with a 3-minute expiration
         await redisClient.set(`cartItems:${user_id}`, JSON.stringify(cartItemsWithTotalPrice));
-        await redisClient.expire(`cartItems:${user_id}`, 1);
+        await redisClient.expire(`cartItems:${user_id}`, 180);
   
         // Respond with the cart items
         res.status(200).json(cartItemsWithTotalPrice);
@@ -131,10 +131,7 @@ RestaurantCartRouter.patch('/cart-items/patch/:id', async (req: Request, res: Re
             await cartItem.calculateTotalPrice();
         }
 
-        await cartItem.save();
-         // Save with the updated fields
-      await redisClient.set(`cart-item:${id}`, JSON.stringify(cartItem));
-
+        await cartItem.save(); // Save with the updated fields
         res.status(200).json(cartItem);
     } catch (error) {
         res.status(500).json({ message: 'Failed to update cart item', error });
@@ -149,9 +146,7 @@ RestaurantCartRouter.delete('/cart-items/delete/:id', async (req: Request, res: 
             where: {
                 id
             }
-            
         });
-        
 
         if (rowsDeleted === 0) {
             return res.status(404).json({ message: 'Cart item not found' });
@@ -175,13 +170,11 @@ RestaurantCartRouter.delete('/:user_id', async (req: Request, res: Response) => 
         const deletedRows = await CartItem.destroy({
             where: { user_id: user_id, is_deleted: false } // Only delete items that are not already deleted
         });
-      redisClient.del(`cartItems:${user_id}`)
         console.log("Number of cart items deleted:", deletedRows);
 
         if (deletedRows === 0) {
             return res.status(200).json({ message: 'No cart items found for this user, nothing to delete.' });
         }
-
 
 
         res.status(200).json({ message: 'All cart items deleted successfully' });
