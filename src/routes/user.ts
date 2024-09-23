@@ -109,7 +109,7 @@ UserRouter.get('/:id', async (req: Request, res: Response) => {
 
       // Store the user data in Redis with an expiration time of 3 minutes
       await redisClient.set(cacheKey, JSON.stringify(user));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 1);
 
       // Respond with the user data
       res.status(200).json(user);
@@ -144,7 +144,7 @@ UserRouter.get("/", async (req: Request, res: Response) => {
 
       // Store the user data in Redis with an expiration time of 3 minutes
       await redisClient.set(cacheKey, JSON.stringify(users));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 1);
 
       // Respond with the user data
       res.status(200).json(users);
@@ -277,7 +277,7 @@ UserRouter.get('/:id/counts', async (req: Request, res: Response) => {
 
       // Store the active users count in Redis with an expiration time of 3 minutes
       await redisClient.set(cacheKey, JSON.stringify(activeUsersCount));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 1);
 
       // Respond with the active users count
       res.status(200).json({ count: activeUsersCount });
@@ -312,7 +312,7 @@ UserRouter.get('/total/counts/all', async (req: Request, res: Response) => {
 
       // Store the total users count in Redis with an expiration time of 3 minutes
       await redisClient.set(cacheKey, JSON.stringify(totalUsersCount));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 1);
 
       // Respond with the total users count
       res.status(200).json({ count: totalUsersCount });
@@ -386,7 +386,7 @@ UserRouter.get("/:user_id/profile_image", async (req: Request, res: Response) =>
 
       // Store the profile image in Redis with an expiration time of 10 minutes
       await redisClient.set(cacheKey, JSON.stringify(profileImage));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 1);
 
       // Respond with the profile image
       res.status(200).json({ profile_image: profileImage });
