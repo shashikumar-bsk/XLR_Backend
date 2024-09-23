@@ -34,7 +34,7 @@ import CartItemRest from './models/CartItemRestaurants';
 import InstamartOrder from './models/instamartOrder';
 import instamartOrderItem from './models/instamartOrderItems';
 
-// import dish from './models/dish';
+import dish from './models/dish';
 // import Payment from './models/payment';
 
 async function init() {
@@ -69,7 +69,7 @@ async function init() {
     await SuperCategory.sync({ alter: isDev });
     await Category.sync({ alter: isDev });
     await Restaurant.sync({alter: isDev});
-    //await dish.sync({alter: isDev});
+    await dish.sync({alter: isDev});
     await brand.sync({alter: isDev});
     await inventory.sync({alter: isDev});
     await Product.sync({alter: isDev});
