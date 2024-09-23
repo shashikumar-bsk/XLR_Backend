@@ -220,6 +220,8 @@ cartRouter.delete('/item/:cart_id', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
+
 cartRouter.get('/:user_id', async (req, res) => {
     const { user_id } = req.params;
 
@@ -241,8 +243,13 @@ cartRouter.get('/:user_id', async (req, res) => {
 
             // If data is not in Redis, fetch from the database
             const items = await AddToCart.findAll({
-                attributes: ['cart_id', 'product_id', 'quantity', 'total_price', 'promotion_id'],
-                where: { user_id, is_deleted: false }
+                attributes: ['cart_id', 'product_id', 'image_url', 'quantity', 'total_price', 'promotion_id'],
+                where: { user_id, is_deleted: false },
+                include: [{
+                    model: Product,
+                    as: 'product',
+                    attributes: ['product_id', 'name', 'price', 'discount_price', 'image_id', 'quantity'] // Updated to include discount_price and quantity
+                }]
             });
 
             if (!items.length) {
@@ -260,9 +267,9 @@ cartRouter.get('/:user_id', async (req, res) => {
                 total_payment: totalPayment
             };
 
-            // Store the data in Redis with an expiration time of 180 seconds (3 minutes)
+            // Store the data in Redis with an expiration time of 120 seconds (2 minutes)
             await redisClient.set(`cart:${user_id}`, JSON.stringify(responseData));
-            await redisClient.expire(`cart:${user_id}`, 120);
+            await redisClient.expire(`cart:${user_id}`, 1);
 
             // Respond with the data fetched from the database
             res.status(200).json(responseData);
@@ -272,7 +279,6 @@ cartRouter.get('/:user_id', async (req, res) => {
         res.status(500).json({ message: 'Error retrieving cart items', error: error.message });
     }
 });
-
 
 
 cartRouter.delete('/:user_id', async (req, res) => {
