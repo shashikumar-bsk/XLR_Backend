@@ -1,4 +1,4 @@
-//productModel.ts
+// productModel.ts
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelizeConnection from '../config'; // Adjust the path to your sequelize instance
 import SubCategory from './SubCategory';
@@ -12,10 +12,12 @@ interface ProductAttributes {
     image_id: number;
     name: string;
     description?: string;
-    quantity:number;
+    quantity: string;
+    total_quantity: number; // New column
     price: number;
     discount_price: number;
     is_available: boolean;
+    warehouse_location: string; // New column
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -30,10 +32,12 @@ class Product extends Model<ProductAttributes, ProductInput> implements ProductA
     public image_id!: number;
     public name!: string;
     public description?: string;
-    public quantity!: number;
+    public quantity!: string;
+    public total_quantity!: number; // New column
     public price!: number;
     public discount_price!: number;
     public is_available!: boolean;
+    public warehouse_location!: string; // New column
 
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -78,11 +82,13 @@ Product.init({
         allowNull: true,
     },
     quantity: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    total_quantity: { // New column
         type: DataTypes.INTEGER,
         allowNull: false,
-
     },
-
     price: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
@@ -93,6 +99,10 @@ Product.init({
     },
     is_available: {
         type: DataTypes.BOOLEAN,
+        allowNull: false,
+    },
+    warehouse_location: { // New column
+        type: DataTypes.STRING,
         allowNull: false,
     },
 }, {
@@ -108,10 +118,9 @@ Product.init({
         }
     ]
 });
-Product.belongsTo(SubCategory, { foreignKey:'sub_category_id', as:'subCategory' });
 
-Product.belongsTo(Brand, { foreignKey: 'brand_id', as:'brand' });
-
-Product.belongsTo(Image, { foreignKey: 'image_id', as:'image' });
+Product.belongsTo(SubCategory, { foreignKey: 'sub_category_id', as: 'subCategory' });
+Product.belongsTo(Brand, { foreignKey: 'brand_id', as: 'brand' });
+Product.belongsTo(Image, { foreignKey: 'image_id', as: 'image' });
 
 export default Product;
