@@ -1,21 +1,33 @@
 import express, { Request, Response } from 'express';
 import ReceiverDetails from '../db/models/recieverdetails';
-import redisClient from '../../src/redis/redis'
+import redisClient from '../../src/redis/redis';
 
 const ReceiverDetailsRouter = express.Router();
 
 // Create a new receiver detail
 ReceiverDetailsRouter.post('/', async (req: Request, res: Response) => {
     try {
-        const { receiver_name, receiver_phone_number, user_id } = req.body;
+        const { receiver_name, receiver_phone_number, user_id, address, address_type } = req.body;
 
         // Validate required fields
-        if (!receiver_name || !receiver_phone_number || !user_id) {
+        if (!receiver_name || !receiver_phone_number || !user_id || !address || !address_type) {
             return res.status(400).send({ message: 'Please fill in all required fields.' });
         }
 
+        // Validate address_type
+        const validAddressTypes = ['Home', 'Shop', 'Other'];
+        if (!validAddressTypes.includes(address_type)) {
+            return res.status(400).send({ message: 'Invalid address type.' });
+        }
+
         // Create receiver detail
-        const receiverDetail = await ReceiverDetails.create({ receiver_name, receiver_phone_number, user_id });
+        const receiverDetail = await ReceiverDetails.create({
+            receiver_name,
+            receiver_phone_number,
+            user_id,
+            address,
+            address_type,
+        });
 
         return res.status(200).send({ message: 'Receiver detail created successfully', data: receiverDetail });
     } catch (error: any) {
@@ -29,7 +41,6 @@ ReceiverDetailsRouter.get('/', async (req: Request, res: Response) => {
     const cacheKey = 'receiverDetails';
 
     try {
-        // Check if the receiver details data is already in Redis
         redisClient.get(cacheKey, async (err, cachedData) => {
             if (err) {
                 console.error('Redis error:', err);
@@ -37,19 +48,14 @@ ReceiverDetailsRouter.get('/', async (req: Request, res: Response) => {
             }
 
             if (cachedData) {
-                // If data is found in Redis, parse and return it
                 console.log('Cache hit, returning data from Redis');
                 return res.status(200).send(JSON.parse(cachedData));
             }
 
-            // Fetch the receiver details data from the database
             const receiverDetails = await ReceiverDetails.findAll();
-
-            // Store the receiver details data in Redis with an expiration time of 5 minutes
             await redisClient.set(cacheKey, JSON.stringify(receiverDetails));
             await redisClient.expire(cacheKey, 120);
 
-            // Respond with the receiver details data
             res.status(200).send(receiverDetails);
         });
     } catch (error: any) {
@@ -58,14 +64,12 @@ ReceiverDetailsRouter.get('/', async (req: Request, res: Response) => {
     }
 });
 
-
 // Get a receiver detail by ID
 ReceiverDetailsRouter.get('/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
     const cacheKey = `receiverDetail:${id}`;
 
     try {
-        // Check if the receiver detail data is already in Redis
         redisClient.get(cacheKey, async (err, cachedData) => {
             if (err) {
                 console.error('Redis error:', err);
@@ -73,23 +77,19 @@ ReceiverDetailsRouter.get('/:id', async (req: Request, res: Response) => {
             }
 
             if (cachedData) {
-                // If data is found in Redis, parse and return it
                 console.log('Cache hit, returning data from Redis');
                 return res.status(200).send(JSON.parse(cachedData));
             }
 
-            // Fetch the receiver detail data from the database
             const receiverDetail = await ReceiverDetails.findOne({ where: { receiver_id: id } });
 
             if (!receiverDetail) {
                 return res.status(404).send({ message: 'Receiver detail not found.' });
             }
 
-            // Store the receiver detail data in Redis with an expiration time of 3 minutes
             await redisClient.set(cacheKey, JSON.stringify(receiverDetail));
             await redisClient.expire(cacheKey, 120);
 
-            // Respond with the receiver detail data
             res.status(200).send(receiverDetail);
         });
     } catch (error: any) {
@@ -98,12 +98,17 @@ ReceiverDetailsRouter.get('/:id', async (req: Request, res: Response) => {
     }
 });
 
-
 // Update a receiver detail
 ReceiverDetailsRouter.put('/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { receiver_name, receiver_phone_number, user_id } = req.body;
+        const { receiver_name, receiver_phone_number, user_id, address, address_type } = req.body;
+
+        // Validate address_type
+        const validAddressTypes = ['Home', 'Shop', 'Other'];
+        if (address_type && !validAddressTypes.includes(address_type)) {
+            return res.status(400).send({ message: 'Invalid address type.' });
+        }
 
         const receiverDetail = await ReceiverDetails.findOne({ where: { receiver_id: id } });
         if (!receiverDetail) {
@@ -111,7 +116,10 @@ ReceiverDetailsRouter.put('/:id', async (req: Request, res: Response) => {
         }
 
         // Update receiver detail
-        await ReceiverDetails.update({ receiver_name, receiver_phone_number, user_id }, { where: { receiver_id: id } });
+        await ReceiverDetails.update(
+            { receiver_name, receiver_phone_number, user_id, address, address_type },
+            { where: { receiver_id: id } }
+        );
 
         return res.status(200).send({ message: 'Receiver detail updated successfully' });
     } catch (error: any) {
@@ -130,7 +138,6 @@ ReceiverDetailsRouter.delete('/:id', async (req: Request, res: Response) => {
             return res.status(404).send({ message: 'Receiver detail not found.' });
         }
 
-        // Soft delete receiver detail
         await ReceiverDetails.destroy({ where: { receiver_id: id } });
 
         return res.status(200).send({ message: 'Receiver detail deleted successfully' });
