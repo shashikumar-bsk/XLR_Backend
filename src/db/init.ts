@@ -87,6 +87,7 @@ async function init() {
     await Order.sync({alter: isDev});
     await InstamartOrder.sync({alter: isDev});
     await instamartOrderItem.sync({alter: isDev});
+    await Booking.sync({alter: isDev});
 
 }
 

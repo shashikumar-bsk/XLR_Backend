@@ -7,7 +7,7 @@ const bookingRouter = express.Router();
 // Create a new booking
 bookingRouter.post('/', async (req: Request, res: Response) => {
     try {
-        const { user_id, service_id, pickup_address, dropoff_address } = req.body;
+        const { user_id, service_id, pickup_address,goods_type, dropoff_address } = req.body;
 
         // Validate required fields
         if (!user_id || !service_id || !pickup_address || !dropoff_address) {
@@ -15,7 +15,7 @@ bookingRouter.post('/', async (req: Request, res: Response) => {
         }
 
         // Create booking
-        const booking = await Booking.create({ user_id, service_id, pickup_address, dropoff_address });
+        const booking = await Booking.create({ user_id, service_id, pickup_address,goods_type, dropoff_address });
 
         return res.status(200).send({ message: 'Booking created successfully', data: booking });
     } catch (error: any) {
@@ -107,7 +107,7 @@ bookingRouter.get('/:id', async (req: Request, res: Response) => {
 bookingRouter.put('/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { user_id, service_id, pickup_address, dropoff_address } = req.body;
+        const { user_id, service_id, pickup_address,goods_type, dropoff_address } = req.body;
 
         const booking = await Booking.findOne({
             where: { booking_id: id }
@@ -117,7 +117,7 @@ bookingRouter.put('/:id', async (req: Request, res: Response) => {
         }
 
         // Update booking
-        await Booking.update({ user_id, service_id, pickup_address, dropoff_address }, {
+        await Booking.update({ user_id, service_id, pickup_address,goods_type, dropoff_address }, {
             where: { booking_id: id }
         });
 

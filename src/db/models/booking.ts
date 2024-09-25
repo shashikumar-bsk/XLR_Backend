@@ -10,6 +10,7 @@ interface BookingAttributes {
     service_id: number; // Add service_id attribute
     pickup_address: string;
     dropoff_address: string;
+    goods_type: string;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -23,6 +24,7 @@ class Booking extends Model<BookingAttributes, BookingInput> implements BookingA
     public service_id!: number; // Add service_id property
     public pickup_address!: string;
     public dropoff_address!: string;
+    public goods_type!: string; // Add goods_type attribute
 
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -50,12 +52,17 @@ Booking.init({
             key: 'service_id'
         }
     },
+
     pickup_address: {
         type: DataTypes.STRING(255),
         allowNull: false
     },
     dropoff_address: {
         type: DataTypes.STRING(255),
+        allowNull: false
+    },
+    goods_type: {
+        type: DataTypes.STRING,
         allowNull: false
     }
 }, {
