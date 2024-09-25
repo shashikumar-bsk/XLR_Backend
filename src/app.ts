@@ -19,6 +19,7 @@ app.use(cors({
 // Database initialization
 dbInit();
 
+
 // Initializing routes
 app.use('/api/v1', routes);
 
