@@ -12,39 +12,45 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-//productRoute.ts
 const express_1 = __importDefault(require("express"));
 const product_1 = __importDefault(require("../db/models/product")); // Adjust the path to your Product model
+const SubCategory_1 = __importDefault(require("../db/models/SubCategory"));
+const brand_1 = __importDefault(require("../db/models/brand"));
 const image_1 = __importDefault(require("../db/models/image"));
 const productRouter = express_1.default.Router();
 // Create a new product
 productRouter.post('/', (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { sub_category_id, brand_id, image_id, name, description, price, discount_price, is_available } = req.body;
+        const { sub_category_id, brand_id, image_id, name, description, quantity, price, discount_price, is_available } = req.body;
+        // Validate SubCategory ID
         if (sub_category_id) {
-            const subCategoryExists = yield image_1.default.findByPk(sub_category_id);
+            const subCategoryExists = yield SubCategory_1.default.findByPk(sub_category_id);
             if (!subCategoryExists) {
                 return res.status(400).json({ error: 'SubCategory ID does not exist' });
             }
         }
+        // Validate Brand ID
         if (brand_id) {
-            const brandExists = yield image_1.default.findByPk(brand_id);
+            const brandExists = yield brand_1.default.findByPk(brand_id);
             if (!brandExists) {
                 return res.status(400).json({ error: 'Brand ID does not exist' });
             }
         }
+        // Validate Image ID
         if (image_id) {
             const imageExists = yield image_1.default.findByPk(image_id);
             if (!imageExists) {
                 return res.status(400).json({ error: 'Image ID does not exist' });
             }
         }
+        // Create new product
         const newProduct = yield product_1.default.create({
             sub_category_id,
             brand_id,
             image_id,
             name,
             description,
+            quantity,
             price,
             discount_price,
             is_available
@@ -55,10 +61,18 @@ productRouter.post('/', (req, res, next) => __awaiter(void 0, void 0, void 0, fu
         next(error);
     }
 }));
-// Get all products
+// Get all products with optional category filter
 productRouter.get('/', (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { sub_category_id } = req.query;
     try {
-        const products = yield product_1.default.findAll();
+        const products = yield product_1.default.findAll({
+            include: [
+                { model: SubCategory_1.default, as: 'subCategory' },
+                { model: brand_1.default, as: 'brand' },
+                { model: image_1.default, as: 'image' }
+            ],
+            where: sub_category_id ? { '$subCategory.sub_category_id$': sub_category_id } : undefined // Only apply filter if categoryId is provided
+        });
         res.status(200).json(products);
     }
     catch (error) {
@@ -69,7 +83,13 @@ productRouter.get('/', (req, res, next) => __awaiter(void 0, void 0, void 0, fun
 productRouter.get('/:id', (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        const product = yield product_1.default.findByPk(id);
+        const product = yield product_1.default.findByPk(id, {
+            include: [
+                { model: SubCategory_1.default, as: 'subCategory' },
+                { model: brand_1.default, as: 'brand' },
+                { model: image_1.default, as: 'image' }
+            ]
+        });
         if (product) {
             res.status(200).json(product);
         }
@@ -85,13 +105,33 @@ productRouter.get('/:id', (req, res, next) => __awaiter(void 0, void 0, void 0, 
 productRouter.put('/:id', (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        const { sub_category_id, brand_id, image_id, name, description, price, discount_price, is_available } = req.body;
+        const { sub_category_id, brand_id, image_id, name, description, quantity, price, discount_price, is_available } = req.body;
+        // Validate existence of related entities
+        if (sub_category_id) {
+            const subCategoryExists = yield SubCategory_1.default.findByPk(sub_category_id);
+            if (!subCategoryExists) {
+                return res.status(400).json({ error: 'SubCategory ID does not exist' });
+            }
+        }
+        if (brand_id) {
+            const brandExists = yield brand_1.default.findByPk(brand_id);
+            if (!brandExists) {
+                return res.status(400).json({ error: 'Brand ID does not exist' });
+            }
+        }
+        if (image_id) {
+            const imageExists = yield image_1.default.findByPk(image_id);
+            if (!imageExists) {
+                return res.status(400).json({ error: 'Image ID does not exist' });
+            }
+        }
         const [updated] = yield product_1.default.update({
             sub_category_id,
             brand_id,
             image_id,
             name,
             description,
+            quantity,
             price,
             discount_price,
             is_available

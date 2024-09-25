@@ -36,7 +36,8 @@ import OrderItemRouter from "./order_items";
 import RestaurantCartRouter from "./CartItemForRestaurants"
 import UsersRouter from "./userimage";
 import firebaseNotification from "./notificationRoutes";
-
+import instamartOrderRouter from "./InstamartOrderRoute";
+import InstamartOrderItemRouter from "./instamartitemRoute";
 
 const routes = Router();
 
@@ -74,5 +75,8 @@ routes.use('/RestaurantCart',RestaurantCartRouter)
 routes.use('/payments',paymentRouter)
 routes.use('/userimage',UsersRouter)
 routes.use('/firebase',firebaseNotification)
+routes.use('/instamart-order',instamartOrderRouter)
+routes.use('/instamart-item',InstamartOrderItemRouter)
+
 
 export default routes;

@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
+import redisClient from '../../src/redis/redis'
 
 require('dotenv').config();
 
@@ -93,6 +94,7 @@ AdminRouter.post('/', upload.single('admin_image'), async (req: Request, res: Re
       mobile_number,
       admin_image // Include the image URL in the creation
     });
+    
 
     return res.status(200).send({ message: 'Admin created successfully', data: createAdmin });
   } catch (error: any) {
@@ -139,37 +141,84 @@ AdminRouter.post('/login', async (req: Request, res: Response) => {
 AdminRouter.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    console.log(id)
+    // Check if the admin details are already in Redis
+    redisClient.get(`admin:${id}`, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error.' });
+      }
 
-    const admin = await Admin.findOne({ where: { admin_id: id } });
+      if (cachedData) {
+        // If data is found in Redis, parse it and send the response
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).send(JSON.parse(cachedData));
+      }
 
-    if (!admin) {
-      return res.status(404).send({ message: 'Admin not found.' });
-    }
+      // If data is not in Redis, fetch it from the database
+      const admin = await Admin.findOne({ where: { admin_id: id } });
 
-    return res.status(200).send(admin);
+      if (!admin) {
+        return res.status(404).send({ message: 'Admin not found.' });
+      }
+
+      // Store the admin details in Redis with an expiration time (e.g., 60 seconds)
+      // redisClient.setex(`admin:${id}`, 60, JSON.stringify(admin), (redisErr) => {
+      //   if (redisErr) {
+      //     console.error('Error setting data in Redis:', redisErr);
+      //   }
+      // });
+     await redisClient.set(`admin:${id}`,JSON.stringify(admin));
+     await redisClient.expire(`admin:${id}`,180)
+     console.log(redisClient.get(`admin:${id}`))
+      return res.status(200).send("admin");
+    });
   } catch (error: any) {
     console.error('Error in fetching admin by ID:', error);
     return res.status(500).send({ message: `Error in fetching admin: ${error.message}` });
   }
 });
-
 // Get all admins
 AdminRouter.get('/', async (req: Request, res: Response) => {
-  try {
-    const admins = await Admin.findAll();
+  const cacheKey = 'allAdmins'; // Define a cache key for all admins
 
-    return res.status(200).send(admins);
+  try {
+    // Check if the admins data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).json(JSON.parse(cachedData));
+      }
+
+      // Fetch the admins data from the database
+      const admins = await Admin.findAll();
+
+      // Store the admins data in Redis with an expiration time of 5 minutes
+      await redisClient.set(cacheKey, JSON.stringify(admins));
+      await redisClient.expire(cacheKey, 150); // Cache expiration time in seconds (5 minutes)
+
+      // Respond with the admins data
+      res.status(200).json(admins);
+    });
   } catch (error: any) {
     console.error('Error in fetching admins:', error);
-    return res.status(500).send({ message: `Error in fetching admins: ${error.message}` });
+    res.status(500).json({ message: `Error in fetching admins: ${error.message}` });
   }
 });
+
 
 // Update admin
 AdminRouter.patch('/:id', upload.single('admin_image'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { admin_name, email, password, mobile_number } = req.body;
+    // console.log(req.body)
     const admin_image = (req.file as any)?.location;
 
     const admin = await Admin.findOne({ where: { admin_id: id } });
@@ -211,6 +260,7 @@ AdminRouter.patch('/:id', upload.single('admin_image'), async (req: Request, res
 
     // Update admin
     const updateData: any = { admin_name, email, password: updatedPassword, mobile_number };
+    console.log(updateData)
     if (admin_image) {
       updateData.admin_image = admin_image;
     }
@@ -516,23 +566,7 @@ AdminRouter.post('/verify-otp', async (req: Request, res: Response) => {
       error: `Failed to verify OTP: ${error.response?.data?.message || error.message}`
     });
   }
-  // Get admin by ID
-AdminRouter.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-
-    const admin = await Admin.findOne({ where: { admin_id: id } });
-
-    if (!admin) {
-      return res.status(404).send({ message: 'Admin not found.' });
-    }
-
-    return res.status(200).send(admin);
-  } catch (error: any) {
-    console.error('Error in fetching admin by ID:', error);
-    return res.status(500).send({ message: `Error in fetching admin: ${error.message}` });
-  }
-});
+  
 
 });
 

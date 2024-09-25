@@ -3,7 +3,7 @@ import cors from 'cors';
 import http from 'http';
 import dbInit from './db/init';
 import routes from './routes';
-import { initializeSocket } from './socket/socket';
+import { initializeSocket,socketHandlers } from './socket/socket';
 
 const app = express();
 const server = http.createServer(app);
@@ -27,6 +27,7 @@ app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
+socketHandlers(io)
 server.listen(port, () => {
   console.log(`Express is listening at ${port}`);
 });

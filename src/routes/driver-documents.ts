@@ -5,6 +5,7 @@ import multer from 'multer';
 import multerS3 from 'multer-s3';
 import { S3Client } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
+import redisClient from '../../src/redis/redis'
 
 dotenv.config();
 
@@ -72,47 +73,90 @@ DriverDocsRouter.post('/driverdocs', upload.fields([
 
 // Get driver document by ID
 DriverDocsRouter.get('/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
+    // Check if driver document is cached in Redis
+    redisClient.get(`driverDoc:${id}`, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error.' });
+      }
 
-    const driverDoc = await DriverDocs.findOne({ where: { doc_id: id } });
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).send(JSON.parse(cachedData));
+      }
 
-    if (!driverDoc) {
-      return res.status(404).send({ message: 'Driver document not found.' });
-    }
+      // Fetch the driver document from the database
+      const driverDoc = await DriverDocs.findOne({ where: { doc_id: id } });
 
-    // Check if associated driver is not deleted
-    const driver = await Driver.findOne({ where: { driver_id: driverDoc.driver_id, is_deleted: false } });
-    if (!driver) {
-      return res.status(404).send({ message: 'Associated driver not found or is deleted.' });
-    }
+      if (!driverDoc) {
+        return res.status(404).send({ message: 'Driver document not found.' });
+      }
 
-    return res.status(200).send(driverDoc);
+      // Check if the associated driver is not deleted
+      const driver = await Driver.findOne({ where: { driver_id: driverDoc.driver_id, is_deleted: false } });
+      if (!driver) {
+        return res.status(404).send({ message: 'Associated driver not found or is deleted.' });
+      }
+
+      // Store the driver document in Redis with an expiration time of 3 minutes
+      await redisClient.set(`driverDoc:${id}`, JSON.stringify(driverDoc));
+      await redisClient.expire(`driverDoc:${id}`, 120);
+
+      // Respond with the driver document
+      return res.status(200).send(driverDoc);
+    });
   } catch (error: any) {
     console.error('Error in fetching driver document by ID:', error);
     return res.status(500).send({ message: `Error in fetching driver document: ${error.message}` });
   }
 });
 
+
 // Get all documents for a specific driver
 DriverDocsRouter.get('/driver/:driver_id', async (req: Request, res: Response) => {
+  const { driver_id } = req.params;
+
   try {
-    const { driver_id } = req.params;
+    // Check if driver documents are cached in Redis
+    redisClient.get(`driverDocs:${driver_id}`, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error.' });
+      }
 
-    // Check if driver exists and is not deleted
-    const driver = await Driver.findOne({ where: { driver_id, is_deleted: false } });
-    if (!driver) {
-      return res.status(404).send({ message: 'Driver not found or is deleted.' });
-    }
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).send(JSON.parse(cachedData));
+      }
 
-    const driverDocs = await DriverDocs.findAll({ where: { driver_id } });
+      // Check if driver exists and is not deleted
+      const driver = await Driver.findOne({ where: { driver_id, is_deleted: false } });
+      if (!driver) {
+        return res.status(404).send({ message: 'Driver not found or is deleted.' });
+      }
 
-    return res.status(200).send(driverDocs);
+      // Fetch driver documents from the database
+      const driverDocs = await DriverDocs.findAll({ where: { driver_id } });
+
+      // Store the driver documents in Redis with an expiration time of 3 minutes
+      await redisClient.set(`driverDocs:${driver_id}`, JSON.stringify(driverDocs));
+      await redisClient.expire(`driverDocs:${driver_id}`, 120);
+
+      // Respond with the driver documents
+      return res.status(200).send(driverDocs);
+    });
   } catch (error: any) {
     console.error('Error in fetching driver documents:', error);
     return res.status(500).send({ message: `Error in fetching driver documents: ${error.message}` });
   }
 });
+
+
 
 // Update driver document
 DriverDocsRouter.patch('/:id', async (req: Request, res: Response) => {

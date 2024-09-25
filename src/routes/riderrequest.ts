@@ -5,6 +5,7 @@ import Driver from '../db/models/driver';
 import ServiceType from '../db/models/servicetype';
 import Booking from '../db/models/booking';
 import ReceiverDetails from '../db/models/recieverdetails';
+import redisClient from '../../src/redis/redis'
 
 const RideRequestRouter = express.Router();
 
@@ -78,20 +79,45 @@ RideRequestRouter.post('/', async (req: Request, res: Response) => {
 
 //Get ride request by ID
 RideRequestRouter.get('/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const cacheKey = `rideRequest:${id}`; // Define a cache key based on the request ID
+
   try {
-    const { id } = req.params;
-    const rideRequest = await RideRequest.findOne({ where: { request_id: id, is_deleted: false } });
+    // Check if the ride request data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error' });
+      }
 
-    if (!rideRequest) {
-      return res.status(404).send({ message: 'Ride request not found.' });
-    }
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).send(JSON.parse(cachedData));
+      }
 
-    return res.status(200).send({ data: rideRequest });
+      // Fetch the ride request data from the database
+      const rideRequest = await RideRequest.findOne({
+        where: { request_id: id, is_deleted: false }
+      });
+
+      if (!rideRequest) {
+        return res.status(404).send({ message: 'Ride request not found.' });
+      }
+
+      // Store the ride request data in Redis with an expiration time of 3 minutes
+      await redisClient.set(cacheKey, JSON.stringify(rideRequest));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the ride request data
+      res.status(200).send({ data: rideRequest });
+    });
   } catch (error: any) {
     console.error('Error in getting ride request:', error);
-    return res.status(500).send({ message: `Error in getting ride request: ${error.message}` });
+    res.status(500).send({ message: `Error in getting ride request: ${error.message}` });
   }
 });
+
 
 // Update a ride request
 RideRequestRouter.put('/:id', async (req: Request, res: Response) => {
@@ -138,118 +164,234 @@ RideRequestRouter.delete('/:id', async (req: Request, res: Response) => {
 
 // Get all ride requests
 RideRequestRouter.get('/', async (req: Request, res: Response) => {
+  const cacheKey = 'rideRequests'; // Define a cache key for all ride requests
+
   try {
-    const rideRequests = await RideRequest.findAll({ where: { is_deleted: false } });
-    return res.status(200).send({ data: rideRequests });
+    // Check if the ride requests data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error' });
+      }
+
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).send(JSON.parse(cachedData));
+      }
+
+      // Fetch the ride requests data from the database
+      const rideRequests = await RideRequest.findAll({ where: { is_deleted: false } });
+
+      // Store the ride requests data in Redis with an expiration time of 3 minutes
+      await redisClient.set(cacheKey, JSON.stringify(rideRequests));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the ride requests data
+      res.status(200).send({ data: rideRequests });
+    });
   } catch (error: any) {
     console.error('Error in getting all ride requests:', error);
-    return res.status(500).send({ message: `Error in getting all ride requests: ${error.message}` });
+    res.status(500).send({ message: `Error in getting all ride requests: ${error.message}` });
   }
 });
 
+
 RideRequestRouter.get('/ride-requests/completed', async (req: Request, res: Response) => {
+  const cacheKey = 'completedRideRequests'; // Define a cache key for completed ride requests
+
   try {
+    // Check if the completed ride requests data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).json(JSON.parse(cachedData));
+      }
+
+      // Fetch the completed ride requests data from the database
       const completedRideRequests = await RideRequest.findAll({
-
-          where: { status: 'Completed', is_deleted: false },
-
-
-          attributes: ['request_id', 'status'],
-          include: [
-              {
-                  model: User,
-                  attributes: ['username', 'phone'],
-              },
-              {
-                  model: Driver,
-                  attributes: ['driver_name'],
-              },
-              {
-                  model: Booking,
-                  attributes: ['booking_id', 'pickup_address', 'dropoff_address'],
-              },
-              {
-                model: ReceiverDetails,
-                attributes: ['receiver_id', 'receiver_name', 'receiver_phone_number']
-              }
-          ]
+        where: { status: 'Completed', is_deleted: false },
+        attributes: ['request_id', 'status'],
+        include: [
+          {
+            model: User,
+            attributes: ['username', 'phone'],
+          },
+          {
+            model: Driver,
+            attributes: ['driver_name'],
+          },
+          {
+            model: Booking,
+            attributes: ['booking_id', 'pickup_address', 'dropoff_address'],
+          },
+          {
+            model: ReceiverDetails,
+            attributes: ['receiver_id', 'receiver_name', 'receiver_phone_number'],
+          }
+        ]
       });
 
       if (completedRideRequests.length === 0) {
-          return res.status(404).json({ message: 'No completed ride requests found' });
+        return res.status(404).json({ message: 'No completed ride requests found' });
       }
-      
-      res.json(completedRideRequests);
-  } catch (error) {
-      console.error('Error in fetching completed ride requests:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
+
+      // Store the completed ride requests data in Redis with an expiration time of 3 minutes
+      await redisClient.set(cacheKey, JSON.stringify(completedRideRequests));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the completed ride requests data
+      res.status(200).json(completedRideRequests);
+    });
+  } catch (error: any) {
+    console.error('Error in fetching completed ride requests:', error);
+    res.status(500).json({ error: `Internal Server Error: ${error.message}` });
   }
 });
+
+
 
 RideRequestRouter.get('/driver/:driver_id/completed-orders', async (req: Request, res: Response) => {
+  const { driver_id } = req.params;
+  const cacheKey = `completedOrdersCount:${driver_id}`; // Define a cache key based on driver_id
+
   try {
-    const { driver_id } = req.params;
+    // Check if the completed orders count data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
 
-    const completedOrdersCount = await RideRequest.count({
-      where: { driver_id, status: 'Completed', is_deleted: false }
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).json(JSON.parse(cachedData));
+      }
+
+      // Fetch the completed orders count from the database
+      const completedOrdersCount = await RideRequest.count({
+        where: { driver_id, status: 'Completed', is_deleted: false }
+      });
+
+      // Store the completed orders count data in Redis with an expiration time of 3 minutes
+      await redisClient.set(cacheKey, JSON.stringify({ completedOrdersCount }));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the completed orders count data
+      res.status(200).json({ completedOrdersCount });
     });
-
-    return res.status(200).json({ completedOrdersCount });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in fetching completed orders count:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ error: `Internal Server Error: ${error.message}` });
   }
 });
+
 
 // Route for fetching missed orders by driver ID
 RideRequestRouter.get('/driver/:driver_id/missed-orders', async (req: Request, res: Response) => {
+  const { driver_id } = req.params;
+  const cacheKey = `missedOrdersCount:${driver_id}`; // Define a cache key based on driver_id
+
   try {
-    const { driver_id } = req.params;
+    // Check if the missed orders count data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
 
-    const MissedOrdersCount = await RideRequest.count({
-      where: { driver_id, status: 'rejected', is_deleted: false }
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).json(JSON.parse(cachedData));
+      }
+
+      // Fetch the missed orders count from the database
+      const missedOrdersCount = await RideRequest.count({
+        where: { driver_id, status: 'rejected', is_deleted: false }
+      });
+
+      // Store the missed orders count data in Redis with an expiration time of 3 minutes
+      await redisClient.set(cacheKey, JSON.stringify({ missedOrdersCount }));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the missed orders count data
+      res.status(200).json({ missedOrdersCount });
     });
-
-    return res.status(200).json({ MissedOrdersCount });
-  } catch (error) {
-    console.error('Error in fetching completed orders count:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+  } catch (error: any) {
+    console.error('Error in fetching missed orders count:', error);
+    res.status(500).json({ error: `Internal Server Error: ${error.message}` });
   }
 });
+
 
 // Get orders for a specific user
 RideRequestRouter.get('/user/:user_id', async (req: Request, res: Response) => {
+  const { user_id } = req.params;
+  const cacheKey = `rideRequests:${user_id}`; // Define a cache key based on user_id
+
   try {
-    const { user_id } = req.params; 
+    // Check if the ride requests data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
 
-    const getOrderDetails = await RideRequest.findAll({
-      where: { user_id: Number(user_id), is_deleted: false },
-      attributes: ['request_id', 'status'],
-      include: [
-        {
-          model: User,
-          attributes: ['id', 'username'],
-        },
-        {
-          model: Driver,
-          attributes: ['driver_id', 'driver_name', 'vehicle_type'],
-        },
-        {
-          model: Booking,
-          attributes: ['booking_id', 'pickup_address', 'dropoff_address', 'service_id'],
-        },
-      ]
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).json(JSON.parse(cachedData));
+      }
+
+      // Fetch the ride requests data from the database
+      const getOrderDetails = await RideRequest.findAll({
+        where: { user_id: Number(user_id), is_deleted: false },
+        attributes: ['request_id', 'status'],
+        include: [
+          {
+            model: User,
+            attributes: ['id', 'username'],
+          },
+          {
+            model: Driver,
+            attributes: ['driver_id', 'driver_name', 'vehicle_type'],
+          },
+          {
+            model: Booking,
+            attributes: ['booking_id', 'pickup_address', 'dropoff_address', 'service_id'],
+          },
+        ]
+      });
+
+      if (getOrderDetails.length === 0) {
+        return res.status(404).json({ message: 'No ride requests found' });
+      }
+
+      // Store the ride requests data in Redis with an expiration time of 3 minutes
+      await redisClient.set(cacheKey, JSON.stringify(getOrderDetails));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the ride requests data
+      res.status(200).json(getOrderDetails);
     });
-
-    if (getOrderDetails .length === 0) {
-      return res.status(404).json({ message: 'No completed ride requests found' });
-    }
-    
-    res.json(getOrderDetails);
   } catch (error: any) {
-    console.error('Error in fetching completed ride requests:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Error in fetching ride requests:', error);
+    res.status(500).json({ error: `Internal Server Error: ${error.message}` });
   }
 });
 
+
 export default RideRequestRouter;
+
+
+
+
+

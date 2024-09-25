@@ -24,6 +24,7 @@ app.use('/api/v1', routes_1.default);
 app.get('/', (req, res) => {
     res.send('Hello World!');
 });
+(0, socket_1.socketHandlers)(io);
 server.listen(port, () => {
     console.log(`Express is listening at ${port}`);
 });

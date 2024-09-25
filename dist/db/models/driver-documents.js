@@ -104,6 +104,18 @@ DriverDocs.init({
     }
 }, {
     sequelize: config_1.default,
-    tableName: 'driver_docs'
+    tableName: 'driver_docs',
+    indexes: [
+        {
+            unique: true,
+            name: 'docsDriverId_index',
+            fields: ['doc_id']
+        },
+        {
+            unique: false,
+            name: 'docsDriverId_index',
+            fields: ['driver_id']
+        }
+    ]
 });
 exports.default = DriverDocs;
