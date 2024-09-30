@@ -101,11 +101,11 @@ OTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
       if (user) {
         // Generate JWT token
         const token = jwt.sign(
-          { id: user.id, phone: sanitizedPhone ,service_id}, // Include user ID in payload
+          { id: user.id, phone: sanitizedPhone , service_id}, // Include user ID in payload
           JWT_SECRET, 
           { expiresIn: '12h' }
         );
-        console.log('JWT Token:', token); // Log the token
+        console.log('JWT Token:', token,phone,); // Log the token
 
         res.json({ message: 'OTP Verified Successfully!', token });
       } else {

@@ -38,6 +38,7 @@ import UsersRouter from "./userimage";
 import firebaseNotification from "./notificationRoutes";
 import instamartOrderRouter from "./InstamartOrderRoute";
 import InstamartOrderItemRouter from "./instamartitemRoute";
+import SenderDetailsRouter from "./sender_details_route";
 
 const routes = Router();
 
@@ -77,6 +78,7 @@ routes.use('/userimage',UsersRouter)
 routes.use('/firebase',firebaseNotification)
 routes.use('/instamart-order',instamartOrderRouter)
 routes.use('/instamart-item',InstamartOrderItemRouter)
+routes.use('/sender-details',SenderDetailsRouter)
 
 
 export default routes;
