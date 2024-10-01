@@ -37,6 +37,7 @@ import RestaurantCartRouter from "./CartItemForRestaurants"
 import UsersRouter from "./userimage";
 import instamartOrderRouter from "./InstamartOrderRoute";
 import InstamartOrderItemRouter from "./instamartitemRoute";
+import Farerouter from "./FareRouter";
 
 const routes = Router();
 
@@ -75,6 +76,6 @@ routes.use('/payments',paymentRouter)
 routes.use('/userimage',UsersRouter)
 routes.use('/instamart-order',instamartOrderRouter)
 routes.use('/instamart-item',InstamartOrderItemRouter)
-
+routes.use('/fare',Farerouter)
 
 export default routes;
