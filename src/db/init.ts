@@ -27,6 +27,7 @@ import DriverTransaction from './models/drivertransaction';
 import Vehicle from './models/Vehicles';
 import Order from './models/order';
 import Payment from './models/payment';
+import SenderDetails from './models/sender_details';
 
 
 import OrderItem from './models/order_items';
@@ -89,7 +90,8 @@ async function init() {
     await InstamartOrder.sync({alter: isDev});
     await instamartOrderItem.sync({alter: isDev});
     await Fare.sync({alter: isDev});
-   
+    await Booking.sync({alter: isDev});
+    await SenderDetails.sync({alter: isDev});
 
 }
 
