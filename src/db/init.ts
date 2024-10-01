@@ -1,4 +1,4 @@
-const isDev = true;
+// const isDev = true;
 import dotenv from 'dotenv'
 dotenv.config();
 import { Booking } from './models';
@@ -24,7 +24,7 @@ import Address from './models/Address';
 import UserTransaction from './models/userTransaction';
 import AddToCart from './models/add_to_cart';
 import DriverTransaction from './models/drivertransaction';
-import Vehicle from './models/vehicle';
+import Vehicle from './models/Vehicles';
 import Order from './models/order';
 import Payment from './models/payment';
 import SenderDetails from './models/sender_details';
@@ -37,6 +37,7 @@ import instamartOrderItem from './models/instamartOrderItems';
 
 import dish from './models/dish';
 // import Payment from './models/payment';
+import Fare from './models/Fare'
 
 async function init() {
 
@@ -88,6 +89,7 @@ async function init() {
     await Order.sync({alter: isDev});
     await InstamartOrder.sync({alter: isDev});
     await instamartOrderItem.sync({alter: isDev});
+    await Fare.sync({alter: isDev});
     await Booking.sync({alter: isDev});
     await SenderDetails.sync({alter: isDev});
 

@@ -102,7 +102,7 @@ AddressRouter.get('/user/:user_id', async (req: Request, res: Response) => {
 
       // Store the addresses in Redis with an expiration time of 180 seconds (3 minutes)
       await redisClient.set(`addresses:${userId}`, JSON.stringify(addresses));
-      await redisClient.expire(`addresses:${userId}`, 150);
+      await redisClient.expire(`addresses:${userId}`, 1);
 
       // Respond with the addresses
       res.status(200).send({ addresses });
@@ -173,7 +173,7 @@ AddressRouter.get('/details/:address_id', async (req: Request, res: Response) =>
 
       // Store the address details in Redis with an expiration time of 180 seconds (3 minutes)
       await redisClient.set(`addressDetails:${address_id}`, JSON.stringify(address));
-      await redisClient.expire(`addressDetails:${address_id}`, 150);
+      await redisClient.expire(`addressDetails:${address_id}`, 1);
 
       // Respond with the address details
       res.status(200).send({ address });
@@ -227,7 +227,7 @@ AddressRouter.get('/', async (req: Request, res: Response) => {
 
       // Cache all addresses in Redis with a 3-minute expiration
       await redisClient.set('allAddresses', JSON.stringify(addresses));
-      await redisClient.expire('allAddresses', 150);
+      await redisClient.expire('allAddresses', 1);
 
       // Respond with the addresses
       return res.status(200).json({ addresses });

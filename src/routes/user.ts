@@ -85,41 +85,45 @@ UserRouter.post("/", async (req: Request, res: Response) => {
 UserRouter.get('/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   const cacheKey = `user:${id}`; // Define a cache key for the specific user
+  console.log(`Received request for user with ID: ${id}`); // Log the received ID
 
   try {
     // Check if the user data is already in Redis
     redisClient.get(cacheKey, async (err, cachedData) => {
       if (err) {
-        console.error('Redis error:', err);
+        console.error('Redis error while fetching:', err); // Detailed log for Redis error
         return res.status(500).json({ error: 'Internal server error' });
       }
 
       if (cachedData) {
         // If data is found in Redis, parse and return it
-        console.log('Cache hit, returning data from Redis');
+        console.log('Cache hit, returning data from Redis:', cachedData); // Log cached data
         return res.status(200).json(JSON.parse(cachedData));
       }
 
       // Fetch the user data from the database
+      console.log('Cache miss, fetching user from database...'); // Indicate cache miss
       const user = await User.findOne({ where: { id, is_deleted: false } });
 
       if (!user) {
+        console.log(`User not found for ID: ${id}`); // Log if user is not found
         return res.status(404).json({ message: 'User not found.' });
       }
 
       // Store the user data in Redis with an expiration time of 3 minutes
       await redisClient.set(cacheKey, JSON.stringify(user));
-      await redisClient.expire(cacheKey, 1);
+      await redisClient.expire(cacheKey, 180); // Set expiration time to 3 minutes
+      console.log(`User data cached for ID: ${id}`); // Log that user data was cached
 
       // Respond with the user data
+      console.log(`Responding with user data for ID: ${id}`); // Log response
       res.status(200).json(user);
     });
   } catch (error: any) {
-    console.error('Error in fetching user by ID:', error);
+    console.error('Error in fetching user by ID:', error); // Log the entire error object
     res.status(500).json({ message: `Error in fetching user: ${error.message}` });
   }
 });
-
 
 // Get all users if is_deleted is false
 UserRouter.get("/", async (req: Request, res: Response) => {
