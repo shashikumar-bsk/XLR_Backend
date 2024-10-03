@@ -8,8 +8,8 @@ interface SenderDetailsAttributes {
     sender_name: string;
     mobile_number: string;
     user_id: number;
-    address: string;  // Add address column
-    address_type: 'Home' | 'Shop' | 'Other';  // Enum for address type
+    address: string;
+    address_type: 'Home' | 'Shop' | 'Other';
     createdAt?: Date;
     updatedAt?: Date;
 }

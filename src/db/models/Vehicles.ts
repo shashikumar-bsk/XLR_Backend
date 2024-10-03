@@ -2,40 +2,46 @@ import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../config'; // Adjust the path to your Sequelize instance
 import Image from './image'; // Adjust the path to your Image model
 
-// Define the attributes for the Vehicle model
+// Define attributes for the Vehicle model
 interface VehicleAttributes {
     id: number;
     name: string;
-    weightCapacity: number;
-    type: '2 Wheeler' | '3 Wheeler' | '4 Wheeler' | '6 Wheeler';
-    deliveryTime: number;
-    image_id?: number; // Optional image_id for the associated image
+    capacity: string;
+    image_id?: number; // This is the foreign key for the image
+    price: number; // Static price, can be ignored in your calculations
+    baseFare: number; // Base fare for the vehicle
+    ratePerKm: number; // Rate per kilometer for the vehicle
+    estimatedTimePerKm: number; // Estimated time per km (in minutes)
     createdAt?: Date;
     updatedAt?: Date;
 }
 
-// Define input interface (for creating a new Vehicle) where 'id' is optional
-export interface VehicleInput extends Optional<VehicleAttributes, 'id'> { }
+// Define input and output types
+export interface VehicleInput extends Optional<VehicleAttributes, 'id'> {}
+export interface VehicleOutput extends Required<VehicleAttributes> {
+    image?: Image; // This indicates the associated image
+}
 
-// Define output interface (after a Vehicle is created)
-export interface VehicleOutput extends Required<VehicleAttributes> { }
-
-// Define the Vehicle model class
+// Define the Vehicle model
 class Vehicle extends Model<VehicleAttributes, VehicleInput> implements VehicleAttributes {
     public id!: number;
     public name!: string;
-    public weightCapacity!: number;
-    public type!: '2 Wheeler' | '3 Wheeler' | '4 Wheeler' | '6 Wheeler';
-    public deliveryTime!: number;
-    public image_id?: number; // Optional image_id
+    public capacity!: string;
+    public image_id?: number; // Foreign key to the Image model
+    public price!: number;
+    public baseFare!: number;
+    public ratePerKm!: number;
+    public estimatedTimePerKm!: number;
 
     // Timestamps
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
-    static associate: (models: any) => void;
+
+    // Include the image association
+    public readonly image?: Image; // This will hold the associated Image instance
 }
 
-// Initialize the Vehicle model
+// Initialize the model
 Vehicle.init(
     {
         id: {
@@ -47,17 +53,9 @@ Vehicle.init(
             type: DataTypes.STRING,
             allowNull: false,
         },
-        weightCapacity: {
-            type: DataTypes.INTEGER,
-            allowNull: false, // Weight in kilograms (kg)
-        },
-        type: {
-            type: DataTypes.ENUM('2 Wheeler', '3 Wheeler', '4 Wheeler', '6 Wheeler'),
+        capacity: {
+            type: DataTypes.STRING,
             allowNull: false,
-        },
-        deliveryTime: {
-            type: DataTypes.INTEGER,
-            allowNull: false, // Time in minutes
         },
         image_id: {
             type: DataTypes.INTEGER,
@@ -67,24 +65,31 @@ Vehicle.init(
                 key: 'image_id', // Ensure this matches the primary key of the Image model
             },
         },
+        price: {
+            type: DataTypes.DECIMAL(10, 2),
+            allowNull: false,
+        },
+        baseFare: {
+            type: DataTypes.DECIMAL(10, 2),
+            allowNull: false,
+        },
+        ratePerKm: {
+            type: DataTypes.DECIMAL(10, 2),
+            allowNull: false,
+        },
+        estimatedTimePerKm: {
+            type: DataTypes.DECIMAL(10, 2),
+            allowNull: false,
+        },
     },
     {
-        sequelize, // Your Sequelize instance
-        tableName: 'Vehicles', // Table name in the database
-        timestamps: true, // Automatically manages createdAt and updatedAt
+        sequelize,
+        tableName: 'ShipEasevehicles',
+        timestamps: true,
     }
 );
 
-// Define associations
-Vehicle.associate = (models) => {
-    Vehicle.hasMany(models.Fare, {
-        foreignKey: 'vehicleId',
-        as: 'fares',
-    });
-    Vehicle.belongsTo(Image, {
-        foreignKey: 'image_id',
-        as: 'image',
-    });
-};
+// Associate the Vehicle model with the Image model
+Vehicle.belongsTo(Image, { foreignKey: 'image_id', as: 'image' });
 
 export default Vehicle;

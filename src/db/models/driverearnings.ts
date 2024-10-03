@@ -8,7 +8,6 @@ import { Op } from 'sequelize';
 interface DriverEarningsAttributes {
   id: number;
   driver_id: number;
-  request_id: number; // Add this field
   date: Date; // Default to current date
   earnings: number;
   daily_earnings: number;
@@ -24,7 +23,7 @@ class DriverEarnings extends Model<DriverEarningsAttributes, DriverEarningsInput
   implements DriverEarningsAttributes {
   public id!: number;
   public driver_id!: number;
-  public request_id!: number; // Add this field
+
   public date!: Date;
   public earnings!: number;
   public daily_earnings!: number;
@@ -48,14 +47,7 @@ DriverEarnings.init({
       key: 'driver_id',
     },
   },
-  request_id: { // Add this field
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: RideRequest,
-      key: 'request_id',
-    },
-  },
+
   date: {
     type: DataTypes.DATEONLY,
     allowNull: false,
