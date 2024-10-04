@@ -41,7 +41,7 @@ OTPRouter.post('/send-otp', (req, res) => __awaiter(void 0, void 0, void 0, func
     }
     try {
         const response = yield axios_1.default.post('https://auth.otpless.app/auth/otp/v1/send', {
-            phoneNumber: sanitizedPhone,
+            phoneNumber: 91 + sanitizedPhone,
             otpLength: 4,
             channel: 'WHATSAPP',
             expiry: 600
@@ -122,7 +122,7 @@ OTPRouter.post('/verify-otp', (req, res) => __awaiter(void 0, void 0, void 0, fu
     }
     try {
         const response = yield axios_1.default.post('https://auth.otpless.app/auth/otp/v1/verify', {
-            phoneNumber: sanitizedPhone,
+            phoneNumber: 91 + sanitizedPhone,
             otp,
             orderId
         }, {
@@ -140,7 +140,7 @@ OTPRouter.post('/verify-otp', (req, res) => __awaiter(void 0, void 0, void 0, fu
             if (user) {
                 // Generate JWT token
                 const token = jsonwebtoken_1.default.sign({ id: user.id, phone: sanitizedPhone, service_id }, // Include user ID in payload
-                JWT_SECRET, { expiresIn: '1h' });
+                JWT_SECRET, { expiresIn: '12h' });
                 console.log('JWT Token:', token); // Log the token
                 res.json({ message: 'OTP Verified Successfully!', token });
             }

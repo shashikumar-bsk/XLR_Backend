@@ -57,6 +57,13 @@ Promotion.init({
     sequelize: config_1.default,
     tableName: 'promotions',
     createdAt: 'createdAt',
-    updatedAt: 'updatedAt'
+    updatedAt: 'updatedAt',
+    indexes: [
+        {
+            unique: true,
+            name: 'promotionId_index',
+            fields: ['promotion_id']
+        }
+    ]
 });
 exports.default = Promotion;

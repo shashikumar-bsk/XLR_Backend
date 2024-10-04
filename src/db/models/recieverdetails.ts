@@ -7,7 +7,9 @@ interface ReceiverDetailsAttributes {
     receiver_id: number;
     receiver_name: string;
     receiver_phone_number: string;
-    user_id: number;  // Add user_id to attributes
+    user_id: number;
+    address: string;  // Add address column
+    address_type: 'Home' | 'Shop' | 'Other';  // Enum for address type
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -19,7 +21,9 @@ class ReceiverDetails extends Model<ReceiverDetailsAttributes, ReceiverDetailsIn
     public receiver_id!: number;
     public receiver_name!: string;
     public receiver_phone_number!: string;
-    public user_id!: number;  // Add user_id to class properties
+    public user_id!: number;
+    public address!: string;  // Add address to class properties
+    public address_type!: 'Home' | 'Shop' | 'Other';  // Add address_type to class properties
 
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -48,6 +52,14 @@ ReceiverDetails.init({
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
+    },
+    address: {
+        type: DataTypes.STRING(255),  // Address field
+        allowNull: false
+    },
+    address_type: {
+        type: DataTypes.ENUM('Home', 'Shop', 'Other'),  // Enum for Home, Shop, Other
+        allowNull: false
     }
 }, {
     timestamps: true,

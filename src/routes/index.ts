@@ -24,7 +24,7 @@ import AddressRouter from "./AddressRoutes";
 import transactionRouter from "./userTransactionRoute";
 import cartRouter from "./add_to_cartRoute";
 import driverTransactionRouter from "./drivertransaction";  
-import VehicleRouter from "./VehicleRouter";
+import calculatePricesForAllVehicles from "./VehicleRouter";
 import orderRouter from "./order";
 // import OrderItemsRouter from "./order_items";
 // import paymentRouter from "./payment";
@@ -35,6 +35,12 @@ import OrderItemRouter from "./order_items";
 
 import RestaurantCartRouter from "./CartItemForRestaurants"
 import UsersRouter from "./userimage";
+import firebaseNotification from "./notificationRoutes";
+import instamartOrderRouter from "./InstamartOrderRoute";
+import InstamartOrderItemRouter from "./instamartitemRoute";
+import Farerouter from "./FareRouter";
+
+import SenderDetailsRouter from "./sender_details_route";
 
 
 const routes = Router();
@@ -66,11 +72,16 @@ routes.use('/addresses', AddressRouter)
 routes.use('/transactions', transactionRouter)
 routes.use('/cart', cartRouter)
 routes.use('/drivertransactions',driverTransactionRouter)
-routes.use('/vehicle',VehicleRouter)
 routes.use('/order',orderRouter)
 routes.use('/orderitems',OrderItemRouter)
 routes.use('/RestaurantCart',RestaurantCartRouter)
 routes.use('/payments',paymentRouter)
 routes.use('/userimage',UsersRouter)
+routes.use('/firebase',firebaseNotification)
+routes.use('/instamart-order',instamartOrderRouter)
+routes.use('/instamart-item',InstamartOrderItemRouter)
+routes.use('/fare',Farerouter)
+routes.use('/sender-details',SenderDetailsRouter)
+routes.use('/vehicle-type',calculatePricesForAllVehicles)
 
 export default routes;

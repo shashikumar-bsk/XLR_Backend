@@ -1,6 +1,9 @@
 import express, { Request, Response } from "express";
 import Driver from "../db/models/driver";
+
 import { clusterPoints, rawDataPoints } from "../services/greedy_cluster";
+import redisClient from '../../src/redis/redis';
+
 
 const DriverRouter = express.Router();
 
@@ -55,30 +58,71 @@ DriverRouter.post("/", async (req: Request, res: Response) => {
 
 // Get driver by ID
 DriverRouter.get("/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
+    // Check if the driver details are already in Redis
+    redisClient.get(`driver:${id}`, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error.' });
+      }
 
-    const driver = await Driver.findOne({ where: { driver_id: id, is_deleted: false } });
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).send(JSON.parse(cachedData));
+      }
 
-    if (!driver) {
-      return res.status(404).send({ message: "Driver not found." });
-    }
+      // Fetch driver details from the database
+      const driver = await Driver.findOne({ where: { driver_id: id, is_deleted: false } });
 
-    return res.status(200).send(driver);
+      if (!driver) {
+        return res.status(404).send({ message: 'Driver not found.' });
+      }
+
+      // Store the driver details in Redis with an expiration time of 3 minutes
+      await redisClient.set(`driver:${id}`, JSON.stringify(driver));
+      await redisClient.expire(`driver:${id}`, 180);
+
+      // Respond with the driver details
+      return res.status(200).send(driver);
+    });
   } catch (error: any) {
-    console.error("Error in fetching driver by ID:", error);
+    console.error('Error in fetching driver by ID:', error);
     return res.status(500).send({ message: `Error in fetching driver: ${error.message}` });
   }
 });
 
+
 // Get all drivers
 DriverRouter.get("/", async (req: Request, res: Response) => {
   try {
-    const drivers = await Driver.findAll({ where: { is_deleted: false } });
+    // Check if the driver list is already in Redis
+    redisClient.get('drivers:list', async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error.' });
+      }
 
-    return res.status(200).send(drivers);
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).send(JSON.parse(cachedData));
+      }
+
+      // Fetch driver list from the database
+      const drivers = await Driver.findAll({ where: { is_deleted: false } });
+
+      // Store the driver list in Redis with an expiration time of 3 minutes
+      await redisClient.set('drivers:list', JSON.stringify(drivers));
+      await redisClient.expire('drivers:list', 120);
+
+      // Respond with the driver list
+      return res.status(200).send(drivers);
+    });
   } catch (error: any) {
-    console.error("Error in fetching drivers:", error);
+    console.error('Error in fetching drivers:', error);
     return res.status(500).send({ message: `Error in fetching drivers: ${error.message}` });
   }
 });
@@ -169,27 +213,77 @@ DriverRouter.patch("/:id/active", async (req: Request, res: Response) => {
 
 
 
+
+
 DriverRouter.get('/:id/count', async (req: Request, res: Response) => {
   try {
-    // console.log()
-    const activeDriversCount = await Driver.count({
-      where: {
-        active: true,
-        is_deleted: false
+    // Define the cache key based on the route
+    const cacheKey = 'activeDrivers:count';
+
+    // Check if the count is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ message: 'Internal server error.' });
       }
+
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).json({ count: JSON.parse(cachedData) });
+      }
+
+      // Fetch the active drivers count from the database
+      const activeDriversCount = await Driver.count({
+        where: {
+          active: true,
+          is_deleted: false
+        }
+      });
+
+      // Store the count in Redis with an expiration time of 3 minutes
+      await redisClient.set(cacheKey, JSON.stringify(activeDriversCount));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the count
+      res.status(200).json({ count: activeDriversCount });
     });
-    res.json({ count: activeDriversCount });
   } catch (error: any) {
     console.error('Error fetching active drivers:', error);
     res.status(500).json({ message: 'Server Error' });
   }
 });
 
+
 // Get total count of all drivers (including active, inactive, and soft-deleted)
 DriverRouter.get('/total/count/all', async (req: Request, res: Response) => {
   try {
-    const totalDriversCount = await Driver.count();
-    res.json({ count: totalDriversCount });
+    // Define the cache key for total drivers count
+    const cacheKey = 'totalDrivers:count';
+
+    // Check if the count is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ message: 'Internal server error.' });
+      }
+
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).json({ count: JSON.parse(cachedData) });
+      }
+
+      // Fetch the total drivers count from the database
+      const totalDriversCount = await Driver.count();
+
+      // Store the count in Redis with an expiration time of 3 minutes
+      await redisClient.set(cacheKey, JSON.stringify(totalDriversCount));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the total count
+      res.status(200).json({ count: totalDriversCount });
+    });
   } catch (error: any) {
     console.error('Error fetching total drivers count:', error);
     res.status(500).json({ message: 'Server Error' });

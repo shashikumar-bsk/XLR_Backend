@@ -1,20 +1,33 @@
 import express, { Request, Response } from 'express';
 import ReceiverDetails from '../db/models/recieverdetails';
+import redisClient from '../../src/redis/redis';
 
 const ReceiverDetailsRouter = express.Router();
 
 // Create a new receiver detail
 ReceiverDetailsRouter.post('/', async (req: Request, res: Response) => {
     try {
-        const { receiver_name, receiver_phone_number, user_id } = req.body;
+        const { receiver_name, receiver_phone_number, user_id, address, address_type } = req.body;
 
         // Validate required fields
-        if (!receiver_name || !receiver_phone_number || !user_id) {
+        if (!receiver_name || !receiver_phone_number || !user_id || !address || !address_type) {
             return res.status(400).send({ message: 'Please fill in all required fields.' });
         }
 
+        // Validate address_type
+        const validAddressTypes = ['Home', 'Shop', 'Other'];
+        if (!validAddressTypes.includes(address_type)) {
+            return res.status(400).send({ message: 'Invalid address type.' });
+        }
+
         // Create receiver detail
-        const receiverDetail = await ReceiverDetails.create({ receiver_name, receiver_phone_number, user_id });
+        const receiverDetail = await ReceiverDetails.create({
+            receiver_name,
+            receiver_phone_number,
+            user_id,
+            address,
+            address_type,
+        });
 
         return res.status(200).send({ message: 'Receiver detail created successfully', data: receiverDetail });
     } catch (error: any) {
@@ -25,31 +38,63 @@ ReceiverDetailsRouter.post('/', async (req: Request, res: Response) => {
 
 // Get all receiver details
 ReceiverDetailsRouter.get('/', async (req: Request, res: Response) => {
-    try {
-        const receiverDetails = await ReceiverDetails.findAll();
+    const cacheKey = 'receiverDetails';
 
-        return res.status(200).send(receiverDetails);
+    try {
+        redisClient.get(cacheKey, async (err, cachedData) => {
+            if (err) {
+                console.error('Redis error:', err);
+                return res.status(500).send({ message: 'Internal server error' });
+            }
+
+            if (cachedData) {
+                console.log('Cache hit, returning data from Redis');
+                return res.status(200).send(JSON.parse(cachedData));
+            }
+
+            const receiverDetails = await ReceiverDetails.findAll();
+            await redisClient.set(cacheKey, JSON.stringify(receiverDetails));
+            await redisClient.expire(cacheKey, 120);
+
+            res.status(200).send(receiverDetails);
+        });
     } catch (error: any) {
         console.error('Error in fetching receiver details:', error);
-        return res.status(500).send({ message: `Error in fetching receiver details: ${error.message}` });
+        res.status(500).send({ message: `Error in fetching receiver details: ${error.message}` });
     }
 });
 
 // Get a receiver detail by ID
 ReceiverDetailsRouter.get('/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const cacheKey = `receiverDetail:${id}`;
+
     try {
-        const { id } = req.params;
+        redisClient.get(cacheKey, async (err, cachedData) => {
+            if (err) {
+                console.error('Redis error:', err);
+                return res.status(500).send({ message: 'Internal server error' });
+            }
 
-        const receiverDetail = await ReceiverDetails.findOne({ where: { receiver_id: id } });
+            if (cachedData) {
+                console.log('Cache hit, returning data from Redis');
+                return res.status(200).send(JSON.parse(cachedData));
+            }
 
-        if (!receiverDetail) {
-            return res.status(404).send({ message: 'Receiver detail not found.' });
-        }
+            const receiverDetail = await ReceiverDetails.findOne({ where: { receiver_id: id } });
 
-        return res.status(200).send(receiverDetail);
+            if (!receiverDetail) {
+                return res.status(404).send({ message: 'Receiver detail not found.' });
+            }
+
+            await redisClient.set(cacheKey, JSON.stringify(receiverDetail));
+            await redisClient.expire(cacheKey, 120);
+
+            res.status(200).send(receiverDetail);
+        });
     } catch (error: any) {
         console.error('Error in fetching receiver detail by ID:', error);
-        return res.status(500).send({ message: `Error in fetching receiver detail: ${error.message}` });
+        res.status(500).send({ message: `Error in fetching receiver detail: ${error.message}` });
     }
 });
 
@@ -57,7 +102,13 @@ ReceiverDetailsRouter.get('/:id', async (req: Request, res: Response) => {
 ReceiverDetailsRouter.put('/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { receiver_name, receiver_phone_number, user_id } = req.body;
+        const { receiver_name, receiver_phone_number, user_id, address, address_type } = req.body;
+
+        // Validate address_type
+        const validAddressTypes = ['Home', 'Shop', 'Other'];
+        if (address_type && !validAddressTypes.includes(address_type)) {
+            return res.status(400).send({ message: 'Invalid address type.' });
+        }
 
         const receiverDetail = await ReceiverDetails.findOne({ where: { receiver_id: id } });
         if (!receiverDetail) {
@@ -65,7 +116,10 @@ ReceiverDetailsRouter.put('/:id', async (req: Request, res: Response) => {
         }
 
         // Update receiver detail
-        await ReceiverDetails.update({ receiver_name, receiver_phone_number, user_id }, { where: { receiver_id: id } });
+        await ReceiverDetails.update(
+            { receiver_name, receiver_phone_number, user_id, address, address_type },
+            { where: { receiver_id: id } }
+        );
 
         return res.status(200).send({ message: 'Receiver detail updated successfully' });
     } catch (error: any) {
@@ -84,7 +138,6 @@ ReceiverDetailsRouter.delete('/:id', async (req: Request, res: Response) => {
             return res.status(404).send({ message: 'Receiver detail not found.' });
         }
 
-        // Soft delete receiver detail
         await ReceiverDetails.destroy({ where: { receiver_id: id } });
 
         return res.status(200).send({ message: 'Receiver detail deleted successfully' });

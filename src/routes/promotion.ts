@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import Promotion from '../db/models/promotions'; // Adjust import based on your file structure
+import redisClient from '../../src/redis/redis'
 
 const PromotionRouter = express.Router();
 
@@ -95,21 +96,42 @@ PromotionRouter.patch('/update/:promotion_id', async (req: Request, res: Respons
 
 // Route to retrieve a promotion by ID
 PromotionRouter.get('/details/:promotion_id', async (req: Request, res: Response) => {
+  const { promotion_id } = req.params;
+  const cacheKey = `promotion:${promotion_id}`;
+
   try {
-    const { promotion_id } = req.params;
+    // Check if the promotion data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error' });
+      }
 
-    // Find promotion by ID
-    const promotion = await Promotion.findByPk(promotion_id);
-    if (!promotion) {
-      return res.status(404).send({ message: 'Promotion not found.' });
-    }
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.status(200).send(JSON.parse(cachedData));
+      }
 
-    return res.status(200).send({ promotion });
+      // Fetch the promotion data from the database
+      const promotion = await Promotion.findByPk(promotion_id);
+      if (!promotion) {
+        return res.status(404).send({ message: 'Promotion not found.' });
+      }
+
+      // Store the promotion data in Redis with an expiration time of 5 minutes
+      await redisClient.set(cacheKey, JSON.stringify(promotion));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the promotion data
+      res.status(200).send({ promotion });
+    });
   } catch (error: any) {
     console.error('Error retrieving promotion details:', error);
-    return res.status(500).send({ message: `Error retrieving promotion details: ${error.message}` });
+    res.status(500).send({ message: `Error retrieving promotion details: ${error.message}` });
   }
 });
+
 
 // Route to delete a promotion by ID
 PromotionRouter.delete('/delete/:promotion_id', async (req: Request, res: Response) => {

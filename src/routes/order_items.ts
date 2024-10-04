@@ -4,6 +4,7 @@ import OrderItem from '../db/models/order_items';
 import Dish from '../db/models/dish';
 import CartItemRest from '../db/models/CartItemRestaurants';
 import sequelizeConnection from '../db/config';
+import redisClient from '../../src/redis/redis'
 
 const OrderItemRouter = express.Router();
 
@@ -34,38 +35,90 @@ OrderItemRouter.post('/', async (req: Request, res: Response) => {
 
 // Get all OrderItems
 OrderItemRouter.get('/', async (req: Request, res: Response) => {
+  const cacheKey = 'orderItems:all';
+
   try {
-    const orderItems = await OrderItem.findAll({
-      where: { is_deleted: false },
-      include: [
-        { model: Order, as: 'order' },
-        { model: Dish, as: 'dish' }
-      ]
+    // Check if the order items data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.json(JSON.parse(cachedData));
+      }
+
+      // Fetch the order items data from the database
+      const orderItems = await OrderItem.findAll({
+        where: { is_deleted: false },
+        include: [
+          { model: Order, as: 'order' },
+          { model: Dish, as: 'dish' }
+        ]
+      });
+
+      // Store the order items data in Redis with an expiration time of 3 minutes
+      await redisClient.set(cacheKey, JSON.stringify(orderItems));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the order items data
+      res.status(200).json(orderItems);
     });
-    res.status(200).send(orderItems);
   } catch (error: any) {
+    console.error('Error fetching order items:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+// Get OrderItem by ID
+
+OrderItemRouter.get('/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const cacheKey = `orderItem:${id}`;
+
+  try {
+    // Check if the order item data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.json(JSON.parse(cachedData));
+      }
+
+      // Fetch the order item data from the database
+      const orderItem = await OrderItem.findByPk(id, {
+        include: [
+          { model: Order, as: 'order' },
+          { model: Dish, as: 'dish' }
+        ]
+      });
+
+      if (!orderItem) {
+        return res.status(404).send({ message: 'OrderItem not found' });
+      }
+
+      // Store the order item data in Redis with an expiration time of 3 minutes
+      await redisClient.set(cacheKey, JSON.stringify(orderItem));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the order item data
+      res.status(200).json(orderItem);
+    });
+  } catch (error: any) {
+    console.error('Error fetching order item by ID:', error);
     res.status(500).send({ message: error.message });
   }
 });
 
-// Get OrderItem by ID
-OrderItemRouter.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const orderItem = await OrderItem.findByPk(id, {
-      include: [
-        { model: Order, as: 'order' },
-        { model: Dish, as: 'dish' }
-      ]
-    });
-    if (!orderItem) {
-      return res.status(404).send({ message: 'OrderItem not found' });
-    }
-    res.status(200).send(orderItem);
-  } catch (error: any) {
-    res.status(500).send({ message: error.message });
-  }
-});
 
 // Update OrderItem by ID
 OrderItemRouter.put('/:id', async (req: Request, res: Response) => {

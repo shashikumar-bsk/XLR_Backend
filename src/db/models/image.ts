@@ -26,6 +26,7 @@ class Image extends Model<ImageAttributes, ImageInput> implements ImageAttribute
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
+  url: any;
 }
 
 // Initialize the Image model

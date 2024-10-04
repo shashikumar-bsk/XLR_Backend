@@ -23,7 +23,7 @@ DriverRouter.post("/", (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (!first_name || !last_name || !email || !password || !vehicle_number || !vehicle_type) {
             return res.status(400).send({ message: "Please fill in all required fields." });
         }
-        // Validate email format
+        // Validate email format                                                        
         if (!/\S+@\S+\.\S+/.test(email)) {
             return res.status(400).send({ message: "Please enter a valid email address." });
         }

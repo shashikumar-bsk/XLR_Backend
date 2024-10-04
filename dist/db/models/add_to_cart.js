@@ -76,6 +76,13 @@ AddToCart.init({
     timestamps: true,
     paranoid: true,
     sequelize: config_1.default,
-    tableName: 'add_to_cart'
+    tableName: 'cart_items',
+    indexes: [
+        {
+            unique: false,
+            name: 'cart_userId_index',
+            fields: ['user_id']
+        }
+    ]
 });
 exports.default = AddToCart;

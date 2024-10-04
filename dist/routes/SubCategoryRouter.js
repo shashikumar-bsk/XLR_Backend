@@ -15,11 +15,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const SubCategory_1 = __importDefault(require("../db/models/SubCategory"));
 const image_1 = __importDefault(require("../db/models/image"));
+const Category_1 = __importDefault(require("../db/models/Category"));
 const SubCategoryRouter = express_1.default.Router();
 // Create SubCategory
 SubCategoryRouter.post('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { category_id, name, description, image_id } = req.body;
+        // Validate that the category_id exists in the Category table
+        const categoryExists = yield Category_1.default.findByPk(category_id);
+        if (!categoryExists) {
+            return res.status(400).json({ error: 'Category ID does not exist' });
+        }
         // Validate that the image_id exists in the Image table if provided
         if (image_id) {
             const imageExists = yield image_1.default.findByPk(image_id);
@@ -36,8 +42,15 @@ SubCategoryRouter.post('/', (req, res) => __awaiter(void 0, void 0, void 0, func
 }));
 // Get all SubCategories
 SubCategoryRouter.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { category_id } = req.query;
     try {
-        const subCategories = yield SubCategory_1.default.findAll();
+        const subCategories = yield SubCategory_1.default.findAll({
+            include: [
+                { model: Category_1.default, as: 'category' },
+                { model: image_1.default, as: 'image' }
+            ],
+            where: category_id ? { '$category.category_id$': category_id } : undefined, // Apply filter if categoryId is provided
+        });
         res.status(200).send(subCategories);
     }
     catch (error) {
@@ -48,7 +61,12 @@ SubCategoryRouter.get('/', (req, res) => __awaiter(void 0, void 0, void 0, funct
 SubCategoryRouter.get('/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        const subCategory = yield SubCategory_1.default.findByPk(id);
+        const subCategory = yield SubCategory_1.default.findByPk(id, {
+            include: [
+                { model: Category_1.default, as: 'category' },
+                { model: image_1.default, as: 'image' }
+            ]
+        });
         if (!subCategory) {
             return res.status(404).send({ message: 'SubCategory not found' });
         }

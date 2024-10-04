@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import DriverTransaction from '../db/models/drivertransaction'; // Adjust the path as needed
+import redisClient from '../../src/redis/redis'
 
 const driverTransactionRouter = express.Router();
 
@@ -53,54 +54,107 @@ driverTransactionRouter.post('/', async (req: Request, res: Response) => {
 
 // Get all transactions for a driver
 driverTransactionRouter.get('/:driver_id', async (req: Request, res: Response) => {
+    const { driver_id } = req.params;
+
+    // Define the cache key for the driver transactions
+    const cacheKey = `driver:transactions:${driver_id}`;
+
     try {
-        const { driver_id } = req.params;
+        // Check if the driver transactions are already in Redis
+        redisClient.get(cacheKey, async (err, cachedData) => {
+            if (err) {
+                console.error('Redis error:', err);
+                return res.status(500).json({ error: 'Internal server error' });
+            }
 
-        // Fetch the latest wallet balance for the driver
-        const latestWalletBalance = await getLatestWalletBalance(Number(driver_id));
+            if (cachedData) {
+                // If data is found in Redis, parse and return it
+                console.log('Cache hit, returning data from Redis');
+                return res.json(JSON.parse(cachedData));
+            }
 
-        // Fetch all transactions for the driver
-        const transactions = await DriverTransaction.findAll({
-            where: { driver_id },
-            attributes: ['transaction_id', 'amount', 'wallet_balance_before', 'wallet_balance_after', 'transaction_type', 'description', 'request_id', 'transaction_date'],
-            order: [['transaction_date', 'DESC']]
-        });
+            // Fetch the latest wallet balance for the driver
+            const latestWalletBalance = await getLatestWalletBalance(Number(driver_id));
 
-        if (transactions.length === 0) {
-            return res.status(404).json({ message: 'No transactions found for this driver' });
-        }
+            // Fetch all transactions for the driver
+            const transactions = await DriverTransaction.findAll({
+                where: { driver_id },
+                attributes: ['transaction_id', 'amount', 'wallet_balance_before', 'wallet_balance_after', 'transaction_type', 'description', 'request_id', 'transaction_date'],
+                order: [['transaction_date', 'DESC']]
+            });
 
-        // Respond with driver details and transactions including the latest wallet balance
-        res.status(200).json({
-            driver_id,
-            latest_wallet_balance: latestWalletBalance,
-            transactions
+            if (transactions.length === 0) {
+                return res.status(404).json({ message: 'No transactions found for this driver' });
+            }
+
+            // Prepare the response data
+            const responseData = {
+                driver_id,
+                latest_wallet_balance: latestWalletBalance,
+                transactions
+            };
+
+            // Store the response data in Redis with an expiration time of 3 minutes
+            await redisClient.set(cacheKey, JSON.stringify(responseData));
+            await redisClient.expire(cacheKey, 120);
+
+            // Respond with the driver details and transactions including the latest wallet balance
+            res.status(200).json(responseData);
         });
     } catch (error) {
         const err = error as Error;
+        console.error('Error fetching driver transactions:', err);
         res.status(500).json({ error: err.message });
     }
 });
+
 
 // Get the latest balance for a driver
 driverTransactionRouter.get('/balance/:driver_id', async (req: Request, res: Response) => {
+    const { driver_id } = req.params;
+
+    // Define the cache key for the driver's latest balance
+    const cacheKey = `driver:balance:${driver_id}`;
+
     try {
-        const { driver_id } = req.params;
+        // Check if the latest balance is already in Redis
+        redisClient.get(cacheKey, async (err, cachedData) => {
+            if (err) {
+                console.error('Redis error:', err);
+                return res.status(500).json({ error: 'Internal server error' });
+            }
 
-        const latestTransaction = await DriverTransaction.findOne({
-            where: { driver_id },
-            order: [['transaction_date', 'DESC']]
+            if (cachedData) {
+                // If data is found in Redis, parse and return it
+                console.log('Cache hit, returning data from Redis');
+                return res.json(JSON.parse(cachedData));
+            }
+
+            // Fetch the latest transaction for the driver
+            const latestTransaction = await DriverTransaction.findOne({
+                where: { driver_id },
+                order: [['transaction_date', 'DESC']]
+            });
+
+            if (latestTransaction) {
+                const balance = latestTransaction.wallet_balance_after;
+
+                // Store the balance in Redis with an expiration time of 3 minutes
+                await redisClient.set(cacheKey, JSON.stringify({ balance }));
+                await redisClient.expire(cacheKey, 120);
+
+                // Respond with the balance
+                res.status(200).json({ balance });
+            } else {
+                res.status(404).json({ message: 'No transactions found for this driver' });
+            }
         });
-
-        if (latestTransaction) {
-            res.status(200).json({ balance: latestTransaction.wallet_balance_after });
-        } else {
-            res.status(404).json({ message: 'No transactions found for this driver' });
-        }
     } catch (error) {
         const err = error as Error;
+        console.error('Error fetching driver balance:', err);
         res.status(500).json({ error: err.message });
     }
 });
+
 
 export default driverTransactionRouter;

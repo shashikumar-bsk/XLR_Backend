@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import Restaurant from '../db/models/restaurant'; // Adjust the path to your Restaurant model
 import Image from '../db/models/image';
+import redisClient from '../../src/redis/redis'
 
 const restaurantRouter = express.Router();
 
@@ -39,44 +40,88 @@ restaurantRouter.post('/', async (req: Request, res: Response) => {
 
 // Get restaurant by ID
 restaurantRouter.get('/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const cacheKey = `restaurant:${id}`;
+
   try {
-    const { id } = req.params;
+      // Check if the restaurant data is already in Redis
+      redisClient.get(cacheKey, async (err, cachedData) => {
+          if (err) {
+              console.error('Redis error:', err);
+              return res.status(500).send({ message: 'Internal server error' });
+          }
 
-    const restaurant = await Restaurant.findByPk(id,{
-  include: [
-        { model: Image, as: 'image' }
-      ],
-      
-    })
+          if (cachedData) {
+              // If data is found in Redis, parse and return it
+              console.log('Cache hit, returning data from Redis');
+              return res.status(200).send(JSON.parse(cachedData));
+          }
 
-    if (!restaurant) {
-      return res.status(404).send({ message: 'Restaurant not found.' });
-    }
+          // Fetch the restaurant data from the database
+          const restaurant = await Restaurant.findByPk(id, {
+              include: [
+                  { model: Image, as: 'image' }
+              ],
+          });
 
-    return res.status(200).send(restaurant);
+          if (!restaurant) {
+              return res.status(404).send({ message: 'Restaurant not found.' });
+          }
+
+          // Store the restaurant data in Redis with an expiration time of 3 minutes
+          await redisClient.set(cacheKey, JSON.stringify(restaurant));
+          await redisClient.expire(cacheKey, 120);
+
+          // Respond with the restaurant data
+          res.status(200).send(restaurant);
+      });
   } catch (error: any) {
-    console.error('Error in fetching restaurant by ID:', error);
-    return res.status(500).send({ message: `Error in fetching restaurant: ${error.message}` });
+      console.error('Error in fetching restaurant by ID:', error);
+      res.status(500).send({ message: `Error in fetching restaurant: ${error.message}` });
   }
 });
+
 
 // Get all restaurants
 restaurantRouter.get('/', async (req: Request, res: Response) => {
-   const { id } = req.params;
-  try {
-    const restaurants = await Restaurant.findAll({
-      include: [
-        { model: Image, as: 'image' }
-      ],
-       where: id ? { '$category.category_id$':id } : undefined,
-    });
+  const { id } = req.query; // Use query instead of params for filtering
+  const cacheKey = id ? `restaurants:category:${id}` : 'restaurants:all'; // Dynamic cache key based on query parameter
 
-    return res.status(200).send(restaurants);
+  try {
+      // Check if the restaurants data is already in Redis
+      redisClient.get(cacheKey, async (err, cachedData) => {
+          if (err) {
+              console.error('Redis error:', err);
+              return res.status(500).send({ message: 'Internal server error' });
+          }
+
+          if (cachedData) {
+              // If data is found in Redis, parse and return it
+              console.log('Cache hit, returning data from Redis');
+              return res.status(200).send(JSON.parse(cachedData));
+          }
+
+          // Fetch the restaurants data from the database
+          const restaurants = await Restaurant.findAll({
+              include: [
+                  { model: Image, as: 'image' }
+              ],
+              where: id ? { '$category.category_id$': id } : undefined,
+          });
+
+          // Store the restaurants data in Redis with an expiration time of 3 minutes
+          await redisClient.set(cacheKey, JSON.stringify(restaurants));
+          await redisClient.expire(cacheKey, 120);
+
+          // Respond with the restaurants data
+          res.status(200).send(restaurants);
+      });
   } catch (error: any) {
-    console.error('Error in fetching restaurants:', error);
-    return res.status(500).send({ message: `Error in fetching restaurants: ${error.message}` });
+      console.error('Error in fetching restaurants:', error);
+      res.status(500).send({ message: `Error in fetching restaurants: ${error.message}` });
   }
 });
+
 
 // Update restaurant
 restaurantRouter.patch('/:id', async (req: Request, res: Response) => {

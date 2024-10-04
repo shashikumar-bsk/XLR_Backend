@@ -9,6 +9,7 @@ import Category from '../db/models/Category';
 import SubCategory from '../db/models/SubCategory';
 import Brand from '../db/models/brand';
 import Restaurant from '../db/models/restaurant';
+import redisClient from '../../src/redis/redis'
 
 dotenv.config();
 
@@ -130,32 +131,80 @@ ImageRouter.post('/upload', upload.single('image'), async (req: Request, res: Re
 
 // Get an image by ID
 ImageRouter.get('/:id', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const cacheKey = `image:${id}`;
+
   try {
-    const { id } = req.params;
+    // Check if the image data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ message: 'Internal server error' });
+      }
 
-    const image = await Image.findOne({ where: { image_id: id } });
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.json(JSON.parse(cachedData));
+      }
 
-    if (!image) {
-      return res.status(404).json({ message: 'Image not found' });
-    }
+      // Fetch the image data from the database
+      const image = await Image.findOne({ where: { image_id: id } });
 
-    res.status(200).json(image);
+      if (!image) {
+        return res.status(404).json({ message: 'Image not found' });
+      }
+
+      // Store the image data in Redis with an expiration time of 3 minutes
+      await redisClient.set(cacheKey, JSON.stringify(image));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the image data
+      res.status(200).json(image);
+    });
   } catch (error: any) {
     console.error('Error in fetching image by ID:', error);
     res.status(500).json({ message: `Error in fetching image: ${error.message}` });
   }
 });
 
+
+
+
 // Get all images
 ImageRouter.get('/', async (req: Request, res: Response) => {
+  const cacheKey = 'all_images';
+
   try {
-    const images = await Image.findAll();
-    res.status(200).json(images);
+    // Check if the images data is already in Redis
+    redisClient.get(cacheKey, async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).json({ message: 'Internal server error' });
+      }
+
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning data from Redis');
+        return res.json(JSON.parse(cachedData));
+      }
+
+      // Fetch the images data from the database
+      const images = await Image.findAll();
+
+      // Store the images data in Redis with an expiration time of 3 minutes
+      await redisClient.set(cacheKey, JSON.stringify(images));
+      await redisClient.expire(cacheKey, 120);
+
+      // Respond with the images data
+      res.status(200).json(images);
+    });
   } catch (error: any) {
     console.error('Error in fetching images:', error);
     res.status(500).json({ message: `Error in fetching images: ${error.message}` });
   }
 });
+
 
 // Update an image
 ImageRouter.patch('/:id', async (req: Request, res: Response) => {
