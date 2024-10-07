@@ -10,9 +10,9 @@ driverEarningsRouter.use(express.json());
 // Create a new driver earnings record
 driverEarningsRouter.post('/', async (req: Request, res: Response) => {
     try {
-        const { driver_id, request_id, earnings } = req.body;
+        const { driver_id, earnings } = req.body;
 
-        if (!driver_id || !request_id || !earnings) {
+        if (!driver_id || !earnings) {
             return res.status(400).send({ message: 'Please provide driver_id, request_id, and earnings.' });
         }
 
@@ -29,7 +29,6 @@ driverEarningsRouter.post('/', async (req: Request, res: Response) => {
         // Create a new driver earnings record
         const driverEarnings = await DriverEarnings.create({
             driver_id,
-            request_id,
             date,
             earnings: earningsNumber,
             daily_earnings: earningsNumber,
@@ -209,7 +208,7 @@ driverEarningsRouter.put('/:id', async (req: Request, res: Response) => {
 
         const date = new Date();
 
-        await driverEarnings.update({ driver_id, request_id, date, earnings });
+        await driverEarnings.update({ driver_id, date, earnings });
         return res.status(200).send({ message: 'Driver earnings updated successfully', data: driverEarnings });
     } catch (error: any) {
         console.error('Error in updating driver earnings:', error);

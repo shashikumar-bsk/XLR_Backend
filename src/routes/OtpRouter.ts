@@ -1,10 +1,9 @@
-    import express, { Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import OTP from '../db/models/Otpmodel';
 import User from '../db/models/users';
-
 
 dotenv.config();
 
@@ -101,11 +100,11 @@ OTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
       if (user) {
         // Generate JWT token
         const token = jwt.sign(
-          { id: user.id, phone: sanitizedPhone ,service_id}, // Include user ID in payload
+          { id: user.id, phone: sanitizedPhone , name:user.username, service_id}, // Include user ID in payload
           JWT_SECRET, 
           { expiresIn: '12h' }
         );
-        console.log('JWT Token:', token); // Log the token
+        console.log('JWT Token:', token,phone,); // Log the token
 
         res.json({ message: 'OTP Verified Successfully!', token });
       } else {
@@ -124,51 +123,3 @@ OTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
 
 
 export default OTPRouter;
-
-
-// Verify OTP
-// OTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
-//   const { phone, otp, orderId } = req.body;
-
-//   if (!phone || !otp || !orderId) {
-//     return res.status(400).json({ error: 'Phone number, OTP, and orderId are required' });
-//   }
-
-//   // Sanitize and validate phone number
-//   const sanitizedPhone = phone.replace(/\D/g, '');
-//   if (sanitizedPhone.length < 10 || sanitizedPhone.length > 15) {
-//     return res.status(400).json({ error: 'Invalid phone number format' });
-//   }
-
-//   try {
-//     const response = await axios.post('https://auth.otpless.app/auth/otp/v1/verify', {
-//       phoneNumber: sanitizedPhone,
-//       otp,
-//       orderId
-//     }, {
-//       headers: {
-//         'Content-Type': 'application/json',
-//         'clientId': CLIENT_ID,
-//         'clientSecret': CLIENT_SECRET,
-//         'appId': APP_ID
-//       }
-//     });
-
-//     console.log('OTP verify response:', response.data);
-
-//     if (response.data.isOTPVerified) {
-//       // Generate JWT token
-//       const token = jwt.sign({ id:User.id,phone: sanitizedPhone }, JWT_SECRET, { expiresIn: '1h' });
-//       console.log('JWT Token:', token); // Log the token
-
-//       res.json({ message: 'OTP Verified Successfully!', token });
-//     } else {
-//       res.status(400).json({ error: 'Invalid OTP or phone number' });
-//     }
-//   } catch (error: any) {
-//     console.error('Error verifying OTP:', error.response?.data || error.message);
-//     res.status(error.response?.status || 500).json({
-//       error: `Failed to verify OTP: ${error.response?.data?.message || error.message}`
-//     });
-//   }
-// });
