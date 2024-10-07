@@ -38,7 +38,7 @@ VehicleRouter.get('/', async (req, res) => {
                 include: [{
                     model: Image,
                     as: 'image',
-                    attributes: ['image_id'], // Ensure 'image_id' is included
+                    attributes: ['image_url'], // Ensure 'image_id' is included
                 }],
             });
 
@@ -139,7 +139,6 @@ VehicleRouter.delete('/:id', async (req, res) => {
     }
 });
 
-// Calculate prices based on distance for all vehicles
 VehicleRouter.post('/calculate-prices', async (req: Request, res: Response) => {
     try {
         const { distance } = req.body;
@@ -154,7 +153,7 @@ VehicleRouter.post('/calculate-prices', async (req: Request, res: Response) => {
             include: [{
                 model: Image,
                 as: 'image',
-                attributes: ['image_id'], // Ensure 'image_id' is included
+                attributes: ['image_url'], // Only include the image_url attribute
             }],
         });
 
@@ -172,15 +171,24 @@ VehicleRouter.post('/calculate-prices', async (req: Request, res: Response) => {
             const totalPrice = baseFare + ratePerKm * distance;
             const estimatedTime = estimatedTimePerKm * distance;
 
+            // Convert estimated time into hours/minutes if necessary
+            const formattedTime = estimatedTime >= 60
+                ? `${Math.floor(estimatedTime / 60)} hour${Math.floor(estimatedTime / 60) > 1 ? 's' : ''}`
+                : `${Math.round(estimatedTime)} min`;
+
+            // Access the image_url from the image association
+            const imageUrl = vehicle.image ? vehicle.image.image_url : null;
+
             return {
+                id:vehicle.id,
                 vehicleName: vehicle.name,
                 capacity: vehicle.capacity,
                 baseFare,
                 ratePerKm,
                 distance,
-                totalPrice: !isNaN(totalPrice) ? totalPrice.toFixed(2) : '0.00',
-                estimatedTime: !isNaN(estimatedTime) ? estimatedTime.toFixed(2) : '0.00',
-                image: vehicle.image_id ? vehicle.image_id : null,
+                totalPrice: Math.round(totalPrice), // No decimal for price
+                estimatedTime: formattedTime, // Formatted time with hour/min logic
+                image: imageUrl, // Use the correct image URL
             };
         });
 

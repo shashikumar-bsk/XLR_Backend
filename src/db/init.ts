@@ -12,7 +12,6 @@ import ServiceType from './models/servicetype';
 import User from './models/users';
 import DriverEarnings from './models/driverearnings';
 import Restaurant from './models/restaurant';
-
 import Product from './models/product';
 import SubCategory from './models/SubCategory';
 import SuperCategory from './models/SuperCategory';
@@ -28,16 +27,14 @@ import Vehicle from './models/Vehicles';
 import Order from './models/order';
 import Payment from './models/payment';
 import SenderDetails from './models/sender_details';
-
-
 import OrderItem from './models/order_items';
 import CartItemRest from './models/CartItemRestaurants';
 import InstamartOrder from './models/instamartOrder';
 import instamartOrderItem from './models/instamartOrderItems';
-
 import dish from './models/dish';
 // import Payment from './models/payment';
 import Fare from './models/Fare'
+import vehicleBooking from './models/vehicleBooking';
 
 async function init() {
 
@@ -92,6 +89,7 @@ async function init() {
     await Fare.sync({alter: isDev});
     await Booking.sync({alter: isDev});
     await SenderDetails.sync({alter: isDev});
+    await vehicleBooking.sync({alter: isDev});
 
 }
 

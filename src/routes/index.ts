@@ -32,15 +32,14 @@ import paymentRouter from "./payment";
 import dishRouter from "./dish";
 import driverAuthRouter from "./driverAuthRouter";
 import OrderItemRouter from "./order_items";
-
 import RestaurantCartRouter from "./CartItemForRestaurants"
 import UsersRouter from "./userimage";
 import firebaseNotification from "./notificationRoutes";
 import instamartOrderRouter from "./InstamartOrderRoute";
 import InstamartOrderItemRouter from "./instamartitemRoute";
 import Farerouter from "./FareRouter";
-
 import SenderDetailsRouter from "./sender_details_route";
+import vehicleBookingRouter from "./vehicleBookingRoute";
 
 
 const routes = Router();
@@ -83,5 +82,6 @@ routes.use('/instamart-item',InstamartOrderItemRouter)
 routes.use('/fare',Farerouter)
 routes.use('/sender-details',SenderDetailsRouter)
 routes.use('/vehicle-type',calculatePricesForAllVehicles)
+routes.use('/vehicle-booking',vehicleBookingRouter)
 
 export default routes;
