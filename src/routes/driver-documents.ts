@@ -223,4 +223,40 @@ DriverDocsRouter.delete('/:driverId', async (req, res) => {
   }
 });
 
+
+// Get all documents for all drivers with status false
+DriverDocsRouter.get('/', async (req: Request, res: Response) => {
+  try {
+    // Check if pending driver documents are cached in Redis
+    redisClient.get('pendingDriverDocs', async (err, cachedData) => {
+      if (err) {
+        console.error('Redis error:', err);
+        return res.status(500).send({ message: 'Internal server error.' });
+      }
+
+      if (cachedData) {
+        // If data is found in Redis, parse and return it
+        console.log('Cache hit, returning pending driver documents from Redis');
+        return res.status(200).send(JSON.parse(cachedData));
+      }
+
+      // Fetch only pending driver documents from the database (where status is false)
+      const pendingDriverDocs = await DriverDocs.findAll({
+        where: {
+          status: false
+        }
+      });
+
+      // Store the pending driver documents in Redis with an expiration time of 5 minutes
+      await redisClient.set('pendingDriverDocs', JSON.stringify(pendingDriverDocs));
+      await redisClient.expire('pendingDriverDocs', 300);
+
+      // Respond with the pending driver documents
+      return res.status(200).send(pendingDriverDocs);
+    });
+  } catch (error: any) {
+    console.error('Error in fetching pending driver documents:', error);
+    return res.status(500).send({ message: `Error in fetching pending driver documents: ${error.message}` });
+  }
+});
 export default DriverDocsRouter;
