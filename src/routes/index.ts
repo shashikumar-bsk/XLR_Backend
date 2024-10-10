@@ -41,6 +41,7 @@ import InstamartOrderItemRouter from "./instamartitemRoute";
 import Farerouter from "./FareRouter";
 
 import SenderDetailsRouter from "./sender_details_route";
+import DriversRouter from "./driverimage";
 
 
 const routes = Router();
@@ -83,5 +84,5 @@ routes.use('/instamart-item',InstamartOrderItemRouter)
 routes.use('/fare',Farerouter)
 routes.use('/sender-details',SenderDetailsRouter)
 routes.use('/vehicle-type',calculatePricesForAllVehicles)
-
+routes.use('/driverimage',DriversRouter)
 export default routes;
