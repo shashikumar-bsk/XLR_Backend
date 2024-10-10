@@ -1,6 +1,9 @@
 import express, { Request, Response } from "express";
 import Driver from "../db/models/driver";
-import redisClient from '../../src/redis/redis'
+
+import { clusterPoints, rawDataPoints } from "../services/greedy_cluster";
+import redisClient from '../../src/redis/redis';
+
 
 const DriverRouter = express.Router();
 
@@ -287,5 +290,14 @@ DriverRouter.get('/total/count/all', async (req: Request, res: Response) => {
   }
 });
 
+// Endpoint to get clustered data
+DriverRouter.get('/drive/heatmap-data', async(req:Request, res:Response) => {
+  try{
+  const clusteredData = await clusterPoints(rawDataPoints, 100); // 100 meters threshold
+  res.json(clusteredData);
+  }catch(error){
+    res.status(500).json({error: 'An error occured' })
+  }
+});
 
 export default DriverRouter;

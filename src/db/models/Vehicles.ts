@@ -39,6 +39,7 @@ class Vehicle extends Model<VehicleAttributes, VehicleInput> implements VehicleA
 
     // Include the image association
     public readonly image?: Image; // This will hold the associated Image instance
+    image_url: any;
 }
 
 // Initialize the model
