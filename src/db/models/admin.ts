@@ -11,9 +11,9 @@ interface AdminAttributes {
     otp_session_id?: string | null;
     otp_timestamp?: Date | null;
     admin_image?: string | null; // New field for admin image URL
+    fcm_token?: string | null; // New field for FCM token
     createdAt?: Date;
     updatedAt?: Date;
-    
 }
 
 export interface AdminInput extends Optional<AdminAttributes, 'admin_id'> {}
@@ -28,6 +28,7 @@ class Admin extends Model<AdminAttributes, AdminInput> implements AdminAttribute
     public otp_session_id!: string | null;
     public otp_timestamp!: Date | null;
     public admin_image!: string | null; // New field for admin image URL
+    public fcm_token!: string | null; // New field for FCM token
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -67,6 +68,11 @@ Admin.init({
         defaultValue: null
     },
     admin_image: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        defaultValue: null
+    },
+    fcm_token: { // New field for FCM token
         type: DataTypes.STRING(255),
         allowNull: true,
         defaultValue: null
