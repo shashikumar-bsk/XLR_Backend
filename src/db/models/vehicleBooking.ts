@@ -18,7 +18,7 @@ interface vehicleBookingAttributes {
     receiver_phone: string;
     vehicle_name?: string; // Optional
     vehicle_image?: string; // Optional
-    status: 'completed' | 'pending' | 'cancelled';
+    status: 'completed' | 'pending' | 'cancelled' | 'In progress'  
     createdAt?: Date;
     updatedAt?: Date;
 }

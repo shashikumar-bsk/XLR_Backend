@@ -58,7 +58,7 @@ DriverRouter.post("/", async (req: Request, res: Response) => {
 
 // Get driver by ID
 DriverRouter.get("/:id", async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { id } = req.params;  
 
   try {
     // Check if the driver details are already in Redis
