@@ -2,6 +2,7 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelizeConnection from '../config';
 
+
 interface UserAttributes {
     id: number;
     username: string;
@@ -12,6 +13,7 @@ interface UserAttributes {
     profile_image?: string;  // Add profile_image attribute
     active: boolean;
     is_deleted: boolean;
+    fcm_token?: string;  // Add FCM token attribute
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -29,6 +31,7 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
     public profile_image!: string;  // Add profile_image attribute
     public active!: boolean;
     public is_deleted!: boolean;
+    public fcm_token!: string;  // Add FCM token attribute
 
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -65,6 +68,11 @@ User.init({
         type: DataTypes.STRING(255), // Define profile_image attribute
         allowNull: true,
     },
+    fcm_token: {
+        type: DataTypes.STRING(255), // Define FCM token attribute
+        allowNull: true,
+        unique: true,
+    },
     active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true
@@ -84,6 +92,14 @@ User.init({
             fields: ['id']
         }
     ]
+
+// Add afterCreate hook to notify admin
+
 });
+
+// // Add afterCreate hook to notify admin
+// User.afterCreate(async (user: User) => {
+//     await notifyAdminOnUserRegistration(user);  // Call the separate event handler
+// });
 
 export default User;
