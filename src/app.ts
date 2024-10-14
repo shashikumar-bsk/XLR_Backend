@@ -4,10 +4,12 @@ import http from 'http';
 import dbInit from './db/init';
 import routes from './routes';
 import { initializeSocket,socketHandlers } from './socket/socket';
+import { initializeSocketDriver, socketHandlersDriver } from './socket/driverSocket'
 
 const app = express();
 const server = http.createServer(app);
 const io = initializeSocket(server);
+const ioDriver = initializeSocketDriver(server);
 
 const port = 3000;
 
@@ -28,6 +30,8 @@ app.get('/', (req, res) => {
 });
 
 socketHandlers(io)
+socketHandlersDriver(ioDriver);
+
 server.listen(port, () => {
   console.log(`Express is listening at ${port}`);
 });

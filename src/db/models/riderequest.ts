@@ -14,7 +14,7 @@ interface RideRequestAttributes {
     receiver_id: number;
     booking_id: number;
     status: string;
-    is_deleted: boolean; // Add this line for soft delete
+    is_deleted: boolean; 
     createdAt?: Date;
     updatedAt?: Date;
 }
