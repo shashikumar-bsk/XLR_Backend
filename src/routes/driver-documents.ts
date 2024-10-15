@@ -102,9 +102,9 @@ DriverDocsRouter.get('/:id', async (req: Request, res: Response) => {
         return res.status(404).send({ message: 'Associated driver not found or is deleted.' });
       }
 
-      // Store the driver document in Redis with an expiration time of 3 minutes
+      // Store the driver document in Redis with an expiration time of 2 seconds
       await redisClient.set(`driverDoc:${id}`, JSON.stringify(driverDoc));
-      await redisClient.expire(`driverDoc:${id}`, 120);
+      await redisClient.expire(`driverDoc:${id}`, 2);
 
       // Respond with the driver document
       return res.status(200).send(driverDoc);
@@ -143,9 +143,9 @@ DriverDocsRouter.get('/driver/:driver_id', async (req: Request, res: Response) =
       // Fetch driver documents from the database
       const driverDocs = await DriverDocs.findAll({ where: { driver_id } });
 
-      // Store the driver documents in Redis with an expiration time of 3 minutes
+      // Store the driver documents in Redis with an expiration time of 2 seconds
       await redisClient.set(`driverDocs:${driver_id}`, JSON.stringify(driverDocs));
-      await redisClient.expire(`driverDocs:${driver_id}`, 120);
+      await redisClient.expire(`driverDocs:${driver_id}`, 2);
 
       // Respond with the driver documents
       return res.status(200).send(driverDocs);
@@ -247,9 +247,9 @@ DriverDocsRouter.get('/', async (req: Request, res: Response) => {
         }
       });
 
-      // Store the pending driver documents in Redis with an expiration time of 5 minutes
+      // Store the pending driver documents in Redis with an expiration time of 2 seconds
       await redisClient.set('pendingDriverDocs', JSON.stringify(pendingDriverDocs));
-      await redisClient.expire('pendingDriverDocs', 300);
+      await redisClient.expire('pendingDriverDocs', 2);
 
       // Respond with the pending driver documents
       return res.status(200).send(pendingDriverDocs);

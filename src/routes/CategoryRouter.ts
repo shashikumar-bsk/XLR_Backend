@@ -61,9 +61,9 @@ CategoryRouter.get('/', async (req: Request, res: Response) => {
         return res.status(404).send({ message: 'No categories found.' });
       }
 
-      // Store the fetched categories in Redis with a 3-minute expiration
+      // Store the fetched categories in Redis with a 2 seconds expiration
       await redisClient.set('categories', JSON.stringify(categories));
-      await redisClient.expire('categories', 120);
+      await redisClient.expire('categories', 2);
 
       // Respond with the categories
       res.status(200).send(categories);
@@ -106,9 +106,9 @@ CategoryRouter.get('/:id', async (req: Request, res: Response) => {
         return res.status(404).send({ message: 'Category not found' });
       }
 
-      // Store the fetched category in Redis with a 3-minute expiration
+      // Store the fetched category in Redis with a 2 seconds expiration
       await redisClient.set(`category:${id}`, JSON.stringify(category));
-      await redisClient.expire(`category:${id}`, 120);
+      await redisClient.expire(`category:${id}`, 2);
 
       // Respond with the category
       res.status(200).send(category);

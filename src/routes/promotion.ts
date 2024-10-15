@@ -119,9 +119,9 @@ PromotionRouter.get('/details/:promotion_id', async (req: Request, res: Response
         return res.status(404).send({ message: 'Promotion not found.' });
       }
 
-      // Store the promotion data in Redis with an expiration time of 5 minutes
+      // Store the promotion data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(promotion));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the promotion data
       res.status(200).send({ promotion });

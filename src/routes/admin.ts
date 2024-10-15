@@ -169,7 +169,7 @@ AdminRouter.get('/:id', async (req: Request, res: Response) => {
       //   }
       // });
      await redisClient.set(`admin:${id}`,JSON.stringify(admin));
-     await redisClient.expire(`admin:${id}`,180)
+     await redisClient.expire(`admin:${id}`,2)
      console.log(redisClient.get(`admin:${id}`))
       return res.status(200).send("admin");
     });
@@ -211,7 +211,6 @@ AdminRouter.get('/', async (req: Request, res: Response) => {
     res.status(500).json({ message: `Error in fetching admins: ${error.message}` });
   }
 });
-
 
 // Update admin
 AdminRouter.patch('/:id', upload.single('admin_image'), async (req: Request, res: Response) => {
@@ -270,6 +269,36 @@ AdminRouter.patch('/:id', upload.single('admin_image'), async (req: Request, res
   } catch (error: any) {
     console.error('Error in updating admin:', error);
     return res.status(500).send({ message: `Error in updating admin: ${error.message}` });
+  }
+});
+
+//Update image route
+AdminRouter.patch("/:id/admin_image", upload.single("admin_image"), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const admin_image = (req.file as any)?.location;
+
+    // Check if the image is provided
+    if (!admin_image) {
+      return res.status(400).send({ message: "Profile image is required." });
+    }
+
+    // Find the user by ID
+    const admin = await Admin.findByPk(id);
+    if (!admin) {
+      return res.status(404).send({ message: "Admin not found." });
+    }
+
+    // Update only the profile image
+    admin.admin_image = admin_image;
+
+    // Save the updated user to the database
+    await admin.save();
+
+    return res.status(200).send({ message: "Profile image updated successfully", data: admin });
+  } catch (error: any) {
+    console.error("Error in updating profile image:", error);
+    return res.status(500).send({ message: `Error in updating profile image: ${error.message}` });
   }
 });
 

@@ -86,7 +86,7 @@ productRouter.get('/', async (req: Request, res: Response, next: NextFunction) =
         });
   
         await redisClient.set(cacheKey, JSON.stringify(products));
-        await redisClient.expire(cacheKey, 200);
+        await redisClient.expire(cacheKey, 2);
   
         res.status(200).json(products);
       });
@@ -126,7 +126,7 @@ productRouter.get('/:id', async (req: Request, res: Response, next: NextFunction
         }
   
         await redisClient.set(cacheKey, JSON.stringify(product));
-        await redisClient.expire(cacheKey, 200);
+        await redisClient.expire(cacheKey, 2);
   
         res.status(200).json(product);
       });

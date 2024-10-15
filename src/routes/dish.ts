@@ -57,9 +57,9 @@ dishRouter.get('/:id', async (req: Request, res: Response) => {
 
       const transformedDish = transformDishOutput(dish);
 
-      // Store the fetched dish in Redis with a 2-minute expiration
+      // Store the fetched dish in Redis with a 2 seconds expiration
       await redisClient.set(`dish:${id}`, JSON.stringify(transformedDish));
-      await redisClient.expire(`dish:${id}`, 1);
+      await redisClient.expire(`dish:${id}`, 2);
 
       return res.status(200).send(transformedDish);
     });
@@ -92,9 +92,9 @@ dishRouter.get('/', async (req: Request, res: Response) => {
 
       const transformedDishes = dishes.map(transformDishOutput);
 
-      // Store the fetched dishes in Redis with a 2-minute expiration
+      // Store the fetched dishes in Redis with a 2 seconds expiration
       await redisClient.set('dishes', JSON.stringify(transformedDishes));
-      await redisClient.expire('dishes', 1);
+      await redisClient.expire('dishes', 2);
 
       return res.status(200).send(transformedDishes);
     });
@@ -131,9 +131,9 @@ dishRouter.get('/restaurant/:restaurant_id', async (req: Request, res: Response)
 
       const transformedDishes = dishes.map(transformDishOutput);
 
-      // Store the fetched dishes in Redis with a 2-minute expiration
+      // Store the fetched dishes in Redis with a 2seconds expiration
       await redisClient.set(`dishesByRestaurant:${restaurant_id}`, JSON.stringify(transformedDishes));
-      await redisClient.expire(`dishesByRestaurant:${restaurant_id}`, 1);
+      await redisClient.expire(`dishesByRestaurant:${restaurant_id}`, 2);
 
       return res.status(200).send(transformedDishes);
     });

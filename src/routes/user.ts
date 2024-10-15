@@ -110,9 +110,9 @@ UserRouter.get('/:id', async (req: Request, res: Response) => {
         return res.status(404).json({ message: 'User not found.' });
       }
 
-      // Cache the user data in Redis with an expiration time of 3 minutes
+      // Cache the user data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(user));
-      const expireResult = await redisClient.expire(cacheKey, 180); // Set expiration time to 3 minutes
+      const expireResult = await redisClient.expire(cacheKey, 2);
       console.log(`User data cached for ID: ${id}, Expiration result: ${expireResult}`); // Log cache expiration result
 
       // Respond with the user data
@@ -145,9 +145,9 @@ UserRouter.get("/", async (req: Request, res: Response) => {
       // Fetch the user data from the database
       const users = await User.findAll({ where: { is_deleted: false } });
 
-      // Store the user data in Redis with an expiration time of 3 minutes
+      // Store the user data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(users));
-      await redisClient.expire(cacheKey, 1);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the user data
       res.status(200).json(users);
@@ -278,9 +278,9 @@ UserRouter.get('/:id/counts', async (req: Request, res: Response) => {
         }
       });
 
-      // Store the active users count in Redis with an expiration time of 3 minutes
+      // Store the active users count in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(activeUsersCount));
-      await redisClient.expire(cacheKey, 1);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the active users count
       res.status(200).json({ count: activeUsersCount });
@@ -313,9 +313,9 @@ UserRouter.get('/total/counts/all', async (req: Request, res: Response) => {
       // Fetch the total users count from the database
       const totalUsersCount = await User.count();
 
-      // Store the total users count in Redis with an expiration time of 3 minutes
+      // Store the total users count in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(totalUsersCount));
-      await redisClient.expire(cacheKey, 1);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the total users count
       res.status(200).json({ count: totalUsersCount });
@@ -387,9 +387,9 @@ UserRouter.get("/:user_id/profile_image", async (req: Request, res: Response) =>
 
       const profileImage = user.profile_image;
 
-      // Store the profile image in Redis with an expiration time of 10 minutes
+      // Store the profile image in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(profileImage));
-      await redisClient.expire(cacheKey, 1);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the profile image
       res.status(200).json({ profile_image: profileImage });

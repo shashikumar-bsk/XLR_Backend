@@ -79,7 +79,7 @@ async function init() {
     await UserTransaction.sync({alter: isDev});
     await AddToCart.sync({alter: isDev});
     await DriverTransaction.sync({alter: isDev});
-    await Vehicle.sync({alter: true});
+    await Vehicle.sync({alter: isDev});
     await OrderItem.sync({alter: isDev});
     await Payment.sync({alter: isDev});
     await CartItemRest.sync({alter: isDev});

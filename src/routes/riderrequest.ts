@@ -105,9 +105,9 @@ RideRequestRouter.get('/:id', async (req: Request, res: Response) => {
         return res.status(404).send({ message: 'Ride request not found.' });
       }
 
-      // Store the ride request data in Redis with an expiration time of 3 minutes
+      // Store the ride request data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(rideRequest));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the ride request data
       res.status(200).send({ data: rideRequest });
@@ -183,9 +183,9 @@ RideRequestRouter.get('/', async (req: Request, res: Response) => {
       // Fetch the ride requests data from the database
       const rideRequests = await RideRequest.findAll({ where: { is_deleted: false } });
 
-      // Store the ride requests data in Redis with an expiration time of 3 minutes
+      // Store the ride requests data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(rideRequests));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the ride requests data
       res.status(200).send({ data: rideRequests });
@@ -216,7 +216,7 @@ RideRequestRouter.get('/ride-requests/completed', async (req: Request, res: Resp
 
       // Fetch the completed ride requests data from the database
       const completedRideRequests = await RideRequest.findAll({
-        where: { status: 'Completed', is_deleted: false },
+        where: { status: 'completed', is_deleted: false },
         attributes: ['request_id', 'status'],
         include: [
           {
@@ -242,9 +242,9 @@ RideRequestRouter.get('/ride-requests/completed', async (req: Request, res: Resp
         return res.status(404).json({ message: 'No completed ride requests found' });
       }
 
-      // Store the completed ride requests data in Redis with an expiration time of 3 minutes
+      // Store the completed ride requests data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(completedRideRequests));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the completed ride requests data
       res.status(200).json(completedRideRequests);
@@ -280,9 +280,9 @@ RideRequestRouter.get('/driver/:driver_id/completed-orders', async (req: Request
         where: { driver_id, status: 'Completed', is_deleted: false }
       });
 
-      // Store the completed orders count data in Redis with an expiration time of 3 minutes
+      // Store the completed orders count data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify({ completedOrdersCount }));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the completed orders count data
       res.status(200).json({ completedOrdersCount });
@@ -318,9 +318,9 @@ RideRequestRouter.get('/driver/:driver_id/missed-orders', async (req: Request, r
         where: { driver_id, status: 'rejected', is_deleted: false }
       });
 
-      // Store the missed orders count data in Redis with an expiration time of 3 minutes
+      // Store the missed orders count data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify({ missedOrdersCount }));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the missed orders count data
       res.status(200).json({ missedOrdersCount });
@@ -375,9 +375,9 @@ RideRequestRouter.get('/user/:user_id', async (req: Request, res: Response) => {
         return res.status(404).json({ message: 'No ride requests found' });
       }
 
-      // Store the ride requests data in Redis with an expiration time of 3 minutes
+      // Store the ride requests data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(getOrderDetails));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the ride requests data
       res.status(200).json(getOrderDetails);

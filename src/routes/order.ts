@@ -83,9 +83,9 @@ orderRouter.get('/', async (req: Request, res: Response) => {
         include: [User] // Include related User data
       });
 
-      // Store the orders data in Redis with an expiration time of 3 minutes
+      // Store the orders data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(orders));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the orders data
       res.status(200).json(orders);
@@ -125,9 +125,9 @@ orderRouter.get('/:order_id', async (req: Request, res: Response) => {
         return res.status(404).json({ message: 'Order not found' });
       }
 
-      // Store the order data in Redis with an expiration time of 3 minutes
+      // Store the order data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(order));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the order data
       res.status(200).json(order);
@@ -215,9 +215,9 @@ orderRouter.get('/:order_id/:user_id', async (req: Request, res: Response) => {
         return res.status(404).json({ message: 'Order not found for the given user' });
       }
 
-      // Store the order data in Redis with an expiration time of 3 minutes
+      // Store the order data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(order));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the order data
       res.status(200).json(order);

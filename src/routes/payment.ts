@@ -50,9 +50,9 @@ paymentrouter.get('/', async (req: Request, res: Response) => {
         // Fetch the payments data from the database
         const payments: PaymentOutput[] = await Payment.findAll();
   
-        // Store the payments data in Redis with an expiration time of 3 minutes
+        // Store the payments data in Redis with an expiration time of 2 seconds
         await redisClient.set(cacheKey, JSON.stringify(payments));
-        await redisClient.expire(cacheKey, 120);
+        await redisClient.expire(cacheKey, 2);
   
         // Respond with the payments data
         res.status(200).json(payments);
@@ -87,9 +87,9 @@ paymentrouter.get('/:id', async (req: Request, res: Response) => {
         const payment = await Payment.findByPk(id);
   
         if (payment) {
-          // Store the payment data in Redis with an expiration time of 3 minutes
+          // Store the payment data in Redis with an expiration time of 2 seconds
           await redisClient.set(cacheKey, JSON.stringify(payment));
-          await redisClient.expire(cacheKey, 120);
+          await redisClient.expire(cacheKey, 2);
   
           // Respond with the payment data
           res.status(200).json(payment);

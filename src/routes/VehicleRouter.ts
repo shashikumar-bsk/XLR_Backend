@@ -46,9 +46,9 @@ VehicleRouter.get('/', async (req, res) => {
                 return res.status(404).json({ error: 'No vehicles found' });
             }
 
-            // Store the vehicles data in Redis with an expiration time of 3 minutes
+            // Store the vehicles data in Redis with an expiration time of 2 seconds
             await redisClient.set(cacheKey, JSON.stringify(vehicles));
-            await redisClient.expire(cacheKey, 180); // Set expiration time to 180 seconds
+            await redisClient.expire(cacheKey, 2);
 
             // Respond with the vehicles data
             res.status(200).json(vehicles);
@@ -91,9 +91,9 @@ VehicleRouter.get('/:id', async (req, res) => {
                 return res.status(404).json({ error: 'Vehicle not found' });
             }
 
-            // Store the vehicle data in Redis with an expiration time of 3 minutes
+            // Store the vehicle data in Redis with an expiration time of 2 seconds
             await redisClient.set(cacheKey, JSON.stringify(vehicle));
-            await redisClient.expire(cacheKey, 180); // Set expiration time to 180 seconds
+            await redisClient.expire(cacheKey, 2);
 
             // Respond with the vehicle data
             res.status(200).json(vehicle);

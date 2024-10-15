@@ -48,9 +48,9 @@ bookingRouter.get('/', async (req: Request, res: Response) => {
           return res.status(404).send({ message: 'No bookings found.' });
         }
   
-        // Cache the bookings in Redis with an expiration time of 180 seconds (3 minutes)
+        // Cache the bookings in Redis with an expiration time of 2 seconds
         await redisClient.set('allBookings', JSON.stringify(bookings));
-        await redisClient.expire('allBookings', 120);
+        await redisClient.expire('allBookings', 2);
   
         // Respond with the bookings
         return res.status(200).send(bookings);
@@ -89,9 +89,9 @@ bookingRouter.get('/:id', async (req: Request, res: Response) => {
           return res.status(404).send({ message: 'Booking not found.' });
         }
   
-        // Store the booking details in Redis with an expiration time of 180 seconds (3 minutes)
+        // Store the booking details in Redis with an expiration time of 2 seconds
         await redisClient.set(`booking:${id}`, JSON.stringify(booking));
-        await redisClient.expire(`booking:${id}`, 120);
+        await redisClient.expire(`booking:${id}`, 2);
   
         // Respond with the booking details
         return res.status(200).send(booking);
