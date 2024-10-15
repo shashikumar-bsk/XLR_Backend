@@ -216,7 +216,7 @@ RideRequestRouter.get('/ride-requests/completed', async (req: Request, res: Resp
 
       // Fetch the completed ride requests data from the database
       const completedRideRequests = await RideRequest.findAll({
-        where: { status: 'Completed', is_deleted: false },
+        where: { status: 'completed', is_deleted: false },
         attributes: ['request_id', 'status'],
         include: [
           {
