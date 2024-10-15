@@ -62,18 +62,7 @@ DriverDocs.init({
 }, {
     sequelize: sequelizeConnection,
     tableName: 'driver_docs',
-    indexes: [
-        {
-            unique: true,
-            name: 'docsDriverId_index',
-            fields: ['doc_id']
-        },
-        {
-            unique: false,
-            name: 'docsDriverId_index',
-            fields: ['driver_id']
-            }
-    ]
+
 });
 
 export default DriverDocs;

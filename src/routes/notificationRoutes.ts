@@ -2,8 +2,11 @@ import { Router, Request, Response } from 'express';
 import express from 'express';
 import admin from 'firebase-admin';
 import serviceAccount from '../firebaseNotification/shipease-4c855-firebase-adminsdk-273vn-cf274d35ca.json' // Ensure this path is correct
+import User from "../db/models/users";
 
-// Initialize Firebase Admin SDK
+
+
+// // Initialize Firebase Admin SDK
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
 });
@@ -55,6 +58,109 @@ firebaseNotification.post('/send-notification', async (req: Request, res: Respon
       success: false,
       message: 'Error sending notification. Please try again later.',
     });
+  }
+});
+
+
+
+
+//notification apis
+// Define the getUsers API function
+firebaseNotification.get("/getAllNewnotification",async(req: Request, res: Response)=> {
+  try {
+      // Extract page and limit from query params, use default values if not provided
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      // Calculate offset for pagination
+      const offset = (page - 1) * limit;
+
+      // Fetch users based on the notification status with pagination
+      const { count, rows } = await User.findAndCountAll({
+          where: {
+              notification_status: true  // Only get users with notification_status set to true
+          },
+          order: [['createdAt', 'DESC']],  // Order by createdAt descending (newest first)
+          limit: limit,  // Limit number of results per page
+          offset: offset  // Offset for pagination
+      });
+
+      // Calculate total pages
+      const totalPages = Math.ceil(count / limit);
+
+      // Send response with paginated data
+      res.status(200).json({
+          data: rows,
+          meta: {
+              totalItems: count,
+              totalPages: totalPages,
+              currentPage: page,
+              itemsPerPage: limit
+          }
+      });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Server error' });
+  }
+});
+
+firebaseNotification.patch("/notifications/:id/read", async (req: Request, res: Response) => {
+  const { id } = req.params; // Get the user id from the request parameters
+  // const { notification_status } = req.body; // Get the new notification_status from the request body
+
+  try {
+      // Find the user by ID
+      const user = await User.findByPk(id);
+
+      if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Update the notification_status
+      user.notification_status = false;
+
+      // Save the updated user
+      await user.save();
+
+      return res.status(200).json({ message: 'Notification status updated successfully', user });
+  } catch (error) {
+      console.error('Error updating notification status:', error);
+      return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+firebaseNotification.get("/getAllnotifications",async (req: Request, res: Response) => {
+  try {
+      // Extract page and limit from query params, use default values if not provided
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      // Calculate offset for pagination
+      const offset = (page - 1) * limit;
+
+      // Fetch all users with pagination (no filter for notification_status)
+      const { count, rows } = await User.findAndCountAll({
+          order: [['createdAt', 'DESC']],  // Order by createdAt descending (newest first)
+          limit: limit,  // Limit number of results per page
+          offset: offset  // Offset for pagination
+      });
+
+      // Calculate total pages
+      const totalPages = Math.ceil(count / limit);
+
+      // Send response with paginated data
+      res.status(200).json({
+          data: rows,
+          meta: {
+              totalItems: count,
+              totalPages: totalPages,
+              currentPage: page,
+              itemsPerPage: limit
+          }
+      });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Server error' });
   }
 });
 

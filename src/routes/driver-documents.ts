@@ -259,4 +259,5 @@ DriverDocsRouter.get('/', async (req: Request, res: Response) => {
     return res.status(500).send({ message: `Error in fetching pending driver documents: ${error.message}` });
   }
 });
+
 export default DriverDocsRouter;

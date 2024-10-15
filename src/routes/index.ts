@@ -3,7 +3,6 @@ import DriverRouter from "./driver";
 import OTPRouter from "./OtpRouter";
 import UserRouter from "./user";
 import DriverDocsRouter from "./driver-documents";
-// import BookingRouter from "./booking";
 import AdminRouter from "./admin";
 import DriverOTPRouter from "./driverOtpRouter";
 import ReceiverDetailsRouter from "./recieverRoute";
@@ -18,7 +17,6 @@ import CategoryRouter from "./CategoryRouter";
 import SubCategoryRouter from "./SubCategoryRouter";
 import SuperCategoryRouter from "./SuperCategoryRoutes";
 import BrandRouter from "./brand";
-// import dishRouter from "./dish";
 import inventoryRouter from "./inventory";
 import AddressRouter from "./AddressRoutes";
 import transactionRouter from "./userTransactionRoute";
@@ -26,8 +24,6 @@ import cartRouter from "./add_to_cartRoute";
 import driverTransactionRouter from "./drivertransaction";  
 import calculatePricesForAllVehicles from "./VehicleRouter";
 import orderRouter from "./order";
-// import OrderItemsRouter from "./order_items";
-// import paymentRouter from "./payment";
 import paymentRouter from "./payment";
 import dishRouter from "./dish";
 import driverAuthRouter from "./driverAuthRouter";
@@ -39,7 +35,11 @@ import instamartOrderRouter from "./InstamartOrderRoute";
 import InstamartOrderItemRouter from "./instamartitemRoute";
 import Farerouter from "./FareRouter";
 import SenderDetailsRouter from "./sender_details_route";
+
+import DriversRouter from "./driverimage";
+
 import vehicleBookingRouter from "./vehicleBookingRoute";
+
 
 
 const routes = Router();
@@ -47,7 +47,7 @@ const routes = Router();
 
 routes.use('/driver', DriverRouter)
 routes.use('/otp', OTPRouter)
-routes.use('/user',authMiddleware, UserRouter)
+routes.use('/user', UserRouter)
 routes.use('/driverdoc', DriverDocsRouter)
 routes.use('/booking', bookingRouter)
 routes.use('/admin', AdminRouter)
@@ -82,6 +82,10 @@ routes.use('/instamart-item',InstamartOrderItemRouter)
 routes.use('/fare',Farerouter)
 routes.use('/sender-details',SenderDetailsRouter)
 routes.use('/vehicle-type',calculatePricesForAllVehicles)
+
+routes.use('/driverimage',DriversRouter)
+
 routes.use('/vehicle-booking',vehicleBookingRouter)
+
 
 export default routes;
