@@ -260,8 +260,4 @@ DriverDocsRouter.get('/', async (req: Request, res: Response) => {
   }
 });
 
-
-
-
-
 export default DriverDocsRouter;
