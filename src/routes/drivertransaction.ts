@@ -94,9 +94,9 @@ driverTransactionRouter.get('/:driver_id', async (req: Request, res: Response) =
                 transactions
             };
 
-            // Store the response data in Redis with an expiration time of 3 minutes
+            // Store the response data in Redis with an expiration time of 2 seconds
             await redisClient.set(cacheKey, JSON.stringify(responseData));
-            await redisClient.expire(cacheKey, 120);
+            await redisClient.expire(cacheKey, 2);
 
             // Respond with the driver details and transactions including the latest wallet balance
             res.status(200).json(responseData);
@@ -139,9 +139,9 @@ driverTransactionRouter.get('/balance/:driver_id', async (req: Request, res: Res
             if (latestTransaction) {
                 const balance = latestTransaction.wallet_balance_after;
 
-                // Store the balance in Redis with an expiration time of 3 minutes
+                // Store the balance in Redis with an expiration time of 2 seconds
                 await redisClient.set(cacheKey, JSON.stringify({ balance }));
-                await redisClient.expire(cacheKey, 120);
+                await redisClient.expire(cacheKey, 2);
 
                 // Respond with the balance
                 res.status(200).json({ balance });

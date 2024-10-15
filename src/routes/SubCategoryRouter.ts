@@ -60,9 +60,9 @@ SubCategoryRouter.get('/', async (req: Request, res: Response) => {
         where: category_id ? { '$category.category_id$': category_id } : undefined, // Apply filter if category_id is provided
       });
 
-      // Store the subcategories data in Redis with an expiration time of 3 minutes
+      // Store the subcategories data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(subCategories));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the subcategories data
       res.status(200).json(subCategories);
@@ -105,9 +105,9 @@ SubCategoryRouter.get('/:id', async (req: Request, res: Response) => {
         return res.status(404).send({ message: 'SubCategory not found' });
       }
 
-      // Store the subcategory data in Redis with an expiration time of 3 minutes
+      // Store the subcategory data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(subCategory));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the subcategory data
       res.status(200).json(subCategory);

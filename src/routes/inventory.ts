@@ -56,9 +56,9 @@ inventoryRouter.get('/', async (req: Request, res: Response) => {
   
         const inventoryOutput = inventories.map(inventory => inventory.get({ plain: true }));
   
-        // Store the inventories data in Redis with an expiration time of 3 minutes
+        // Store the inventories data in Redis with an expiration time of 2 seconds
         await redisClient.set(cacheKey, JSON.stringify(inventoryOutput));
-        await redisClient.expire(cacheKey, 120);
+        await redisClient.expire(cacheKey, 2);
   
         // Respond with the inventories data
         res.status(200).json(inventoryOutput);
@@ -100,9 +100,9 @@ inventoryRouter.get('/:inventory_id', async (req: Request, res: Response) => {
         if (inventory) {
           const inventoryOutput = inventory.get({ plain: true });
   
-          // Store the inventory data in Redis with an expiration time of 3 minutes
+          // Store the inventory data in Redis with an expiration time of 2 seconds
           await redisClient.set(cacheKey, JSON.stringify(inventoryOutput));
-          await redisClient.expire(cacheKey, 120);
+          await redisClient.expire(cacheKey, 2);
   
           // Respond with the inventory data
           res.status(200).json(inventoryOutput);

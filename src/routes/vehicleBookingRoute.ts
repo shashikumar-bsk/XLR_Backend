@@ -52,7 +52,7 @@ vehicleBookingRouter.get('/', async (req: Request, res: Response) => {
 
             // Cache the results
             await redisClient.set('allVehicleBookings', JSON.stringify(bookings));
-            await redisClient.expire('allVehicleBookings', 1); // Cache for 2 minutes
+            await redisClient.expire('allVehicleBookings', 2); // Cache for 2 seconds
 
             return res.status(200).send(bookings);
         });
@@ -126,7 +126,7 @@ vehicleBookingRouter.get('/:id', async (req: Request, res: Response) => {
 
             // Cache the booking data
             await redisClient.set(`vehicleBooking:${id}`, JSON.stringify(booking));
-            await redisClient.expire(`vehicleBooking:${id}`, 120);
+            await redisClient.expire(`vehicleBooking:${id}`, 2);
 
             return res.status(200).send(booking);
         });

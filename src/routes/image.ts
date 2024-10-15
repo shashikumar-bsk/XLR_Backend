@@ -155,9 +155,9 @@ ImageRouter.get('/:id', async (req: Request, res: Response) => {
         return res.status(404).json({ message: 'Image not found' });
       }
 
-      // Store the image data in Redis with an expiration time of 3 minutes
+      // Store the image data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(image));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the image data
       res.status(200).json(image);
@@ -192,9 +192,9 @@ ImageRouter.get('/', async (req: Request, res: Response) => {
       // Fetch the images data from the database
       const images = await Image.findAll();
 
-      // Store the images data in Redis with an expiration time of 3 minutes
+      // Store the images data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(images));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the images data
       res.status(200).json(images);

@@ -81,9 +81,9 @@ DriverRouter.get("/:id", async (req: Request, res: Response) => {
         return res.status(404).send({ message: 'Driver not found.' });
       }
 
-      // Store the driver details in Redis with an expiration time of 3 minutes
+      // Store the driver details in Redis with an expiration time of 2 seconds
       await redisClient.set(`driver:${id}`, JSON.stringify(driver));
-      await redisClient.expire(`driver:${id}`, 180);
+      await redisClient.expire(`driver:${id}`, 2);
 
       // Respond with the driver details
       return res.status(200).send(driver);
@@ -114,9 +114,9 @@ DriverRouter.get("/", async (req: Request, res: Response) => {
       // Fetch driver list from the database
       const drivers = await Driver.findAll({ where: { is_deleted: false } });
 
-      // Store the driver list in Redis with an expiration time of 3 minutes
+      // Store the driver list in Redis with an expiration time of 2 seconds
       await redisClient.set('drivers:list', JSON.stringify(drivers));
-      await redisClient.expire('drivers:list', 120);
+      await redisClient.expire('drivers:list', 2);
 
       // Respond with the driver list
       return res.status(200).send(drivers);
@@ -241,9 +241,9 @@ DriverRouter.get('/:id/count', async (req: Request, res: Response) => {
         }
       });
 
-      // Store the count in Redis with an expiration time of 3 minutes
+      // Store the count in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(activeDriversCount));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the count
       res.status(200).json({ count: activeDriversCount });
@@ -277,9 +277,9 @@ DriverRouter.get('/total/count/all', async (req: Request, res: Response) => {
       // Fetch the total drivers count from the database
       const totalDriversCount = await Driver.count();
 
-      // Store the count in Redis with an expiration time of 3 minutes
+      // Store the count in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(totalDriversCount));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the total count
       res.status(200).json({ count: totalDriversCount });

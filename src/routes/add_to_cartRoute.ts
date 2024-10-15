@@ -267,9 +267,9 @@ cartRouter.get('/:user_id', async (req, res) => {
                 total_payment: totalPayment
             };
 
-            // Store the data in Redis with an expiration time of 120 seconds (2 minutes)
+            // Store the data in Redis with an expiration time of 2 seconds
             await redisClient.set(`cart:${user_id}`, JSON.stringify(responseData));
-            await redisClient.expire(`cart:${user_id}`, 1);
+            await redisClient.expire(`cart:${user_id}`, 2);
 
             // Respond with the data fetched from the database
             res.status(200).json(responseData);
@@ -335,9 +335,9 @@ cartRouter.get('/total/:user_id', async (req, res) => {
             // Calculate the total amount
             const total_payment = items.reduce((sum, item) => sum + item.total_price, 0);
 
-            // Store the total payment in Redis with an expiration time of 180 seconds (3 minutes)
+            // Store the total payment in Redis with an expiration time of 2 seconds
             await redisClient.set(`cartTotal:${user_id}`, JSON.stringify(total_payment));
-            await redisClient.expire(`cartTotal:${user_id}`, 180);
+            await redisClient.expire(`cartTotal:${user_id}`, 2);
 
             // Respond with the total payment
             res.status(200).json({ total_payment });
