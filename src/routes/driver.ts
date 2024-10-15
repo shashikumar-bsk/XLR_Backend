@@ -83,7 +83,7 @@ DriverRouter.get("/:id", async (req: Request, res: Response) => {
 
       // Store the driver details in Redis with an expiration time of 3 minutes
       await redisClient.set(`driver:${id}`, JSON.stringify(driver));
-      await redisClient.expire(`driver:${id}`, 180);
+      await redisClient.expire(`driver:${id}`, 5);
 
       // Respond with the driver details
       return res.status(200).send(driver);
@@ -116,7 +116,7 @@ DriverRouter.get("/", async (req: Request, res: Response) => {
 
       // Store the driver list in Redis with an expiration time of 3 minutes
       await redisClient.set('drivers:list', JSON.stringify(drivers));
-      await redisClient.expire('drivers:list', 120);
+      await redisClient.expire('drivers:list', 2);
 
       // Respond with the driver list
       return res.status(200).send(drivers);
@@ -132,7 +132,6 @@ DriverRouter.patch("/:id/active", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { active } = req.body;
-
     if (typeof active !== 'boolean') {
       return res.status(400).send({ message: "Please provide a valid active status." });
     }
@@ -149,6 +148,40 @@ DriverRouter.patch("/:id/active", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Error in updating driver's active status:", error);
     return res.status(500).send({ message: `Error in updating driver's active status: ${error.message}` });
+  }
+});
+
+////update all driver.
+DriverRouter.patch("/:id/upadate", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { driver_name, email, phone, gender,vehicle_type, vehicle_number } = req.body;
+
+    // Fetch driver by id and check if not deleted
+    const driver = await Driver.findOne({ where: { driver_id: id, is_deleted: false } });
+
+    if (!driver) {
+      return res.status(404).send({ message: "Driver not found." });
+    }
+
+    // Update driver object
+    const updateDriverObject: any = {
+      driver_name,
+      email,
+      phone,
+      gender,
+      vehicle_type,
+      vehicle_number,
+    };
+
+    // Update driver using Sequelize model
+    const response=await Driver.update(updateDriverObject, { where: { driver_id: id } });
+    console.log(response)
+
+    return res.status(200).send({ message: "Driver updated successfully" });
+  } catch (error: any) {
+    console.error("Error in updating driver:", error);
+    return res.status(500).send({ message: `Error in updating driver: ${error.message}` });
   }
 });
 
