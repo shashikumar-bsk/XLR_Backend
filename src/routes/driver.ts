@@ -83,7 +83,9 @@ DriverRouter.get("/:id", async (req: Request, res: Response) => {
 
       // Store the driver details in Redis with an expiration time of 2 seconds
       await redisClient.set(`driver:${id}`, JSON.stringify(driver));
+
       await redisClient.expire(`driver:${id}`, 2);
+
 
       // Respond with the driver details
       return res.status(200).send(driver);
@@ -131,7 +133,14 @@ DriverRouter.get("/", async (req: Request, res: Response) => {
 DriverRouter.patch("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+
+    const { active } = req.body;
+    if (typeof active !== 'boolean') {
+      return res.status(400).send({ message: "Please provide a valid active status." });
+    }
+
     const { first_name, last_name, email, password, vehicle_number, gender, dob, vehicle_type, active, phone } = req.body;
+
 
     const driver = await Driver.findOne({ where: { driver_id: id, is_deleted: false } });
 
@@ -164,6 +173,43 @@ DriverRouter.patch("/:id", async (req: Request, res: Response) => {
     return res.status(500).send({ message: `Error in updating driver: ${error.message}` });
   }
 });
+
+
+////update all driver.
+DriverRouter.patch("/:id/upadate", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { driver_name, email, phone, gender,vehicle_type, vehicle_number } = req.body;
+
+    // Fetch driver by id and check if not deleted
+    const driver = await Driver.findOne({ where: { driver_id: id, is_deleted: false } });
+
+    if (!driver) {
+      return res.status(404).send({ message: "Driver not found." });
+    }
+
+    // Update driver object
+    const updateDriverObject: any = {
+      driver_name,
+      email,
+      phone,
+      gender,
+      vehicle_type,
+      vehicle_number,
+    };
+
+    // Update driver using Sequelize model
+    const response=await Driver.update(updateDriverObject, { where: { driver_id: id } });
+    console.log(response)
+
+    return res.status(200).send({ message: "Driver updated successfully" });
+  } catch (error: any) {
+    console.error("Error in updating driver:", error);
+    return res.status(500).send({ message: `Error in updating driver: ${error.message}` });
+  }
+});
+
+
 
 // Soft delete driver (set is_deleted to true)
 DriverRouter.delete("/:id", async (req: Request, res: Response) => {
