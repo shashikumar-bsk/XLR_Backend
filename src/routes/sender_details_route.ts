@@ -54,7 +54,7 @@ SenderDetailsRouter.get('/', async (req: Request, res: Response) => {
 
             const senderDetails = await SenderDetails.findAll();
             await redisClient.set(cacheKey, JSON.stringify(senderDetails));
-            await redisClient.expire(cacheKey, 120);
+            await redisClient.expire(cacheKey, 2);
 
             res.status(200).send(senderDetails);
         });
@@ -88,7 +88,7 @@ SenderDetailsRouter.get('/:id', async (req: Request, res: Response) => {
             }
 
             await redisClient.set(cacheKey, JSON.stringify(senderDetail));
-            await redisClient.expire(cacheKey, 120);
+            await redisClient.expire(cacheKey, 2);
 
             res.status(200).send(senderDetail);
         });

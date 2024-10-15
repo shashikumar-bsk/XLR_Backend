@@ -60,9 +60,9 @@ OrderItemRouter.get('/', async (req: Request, res: Response) => {
         ]
       });
 
-      // Store the order items data in Redis with an expiration time of 3 minutes
+      // Store the order items data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(orderItems));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the order items data
       res.status(200).json(orderItems);
@@ -106,9 +106,9 @@ OrderItemRouter.get('/:id', async (req: Request, res: Response) => {
         return res.status(404).send({ message: 'OrderItem not found' });
       }
 
-      // Store the order item data in Redis with an expiration time of 3 minutes
+      // Store the order item data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(orderItem));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the order item data
       res.status(200).json(orderItem);

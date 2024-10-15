@@ -36,9 +36,9 @@ SuperCategoryRouter.get('/', async (req: Request, res: Response) => {
       // Fetch the supercategories data from the database
       const superCategories = await SuperCategory.findAll();
 
-      // Store the supercategories data in Redis with an expiration time of 3 minutes
+      // Store the supercategories data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(superCategories));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the supercategories data
       res.status(200).json(superCategories);
@@ -75,9 +75,9 @@ SuperCategoryRouter.get('/:id', async (req: Request, res: Response) => {
         return res.status(404).json({ message: 'SuperCategory not found' });
       }
 
-      // Store the supercategory data in Redis with an expiration time of 3 minutes
+      // Store the supercategory data in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(superCategory));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the supercategory data
       res.status(200).json(superCategory);

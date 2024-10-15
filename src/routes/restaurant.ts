@@ -70,7 +70,7 @@ restaurantRouter.get('/:id', async (req: Request, res: Response) => {
 
           // Store the restaurant data in Redis with an expiration time of 3 minutes
           await redisClient.set(cacheKey, JSON.stringify(restaurant));
-          await redisClient.expire(cacheKey, 120);
+          await redisClient.expire(cacheKey, 2);
 
           // Respond with the restaurant data
           res.status(200).send(restaurant);
@@ -111,7 +111,7 @@ restaurantRouter.get('/', async (req: Request, res: Response) => {
 
           // Store the restaurants data in Redis with an expiration time of 3 minutes
           await redisClient.set(cacheKey, JSON.stringify(restaurants));
-          await redisClient.expire(cacheKey, 120);
+          await redisClient.expire(cacheKey, 2);
 
           // Respond with the restaurants data
           res.status(200).send(restaurants);

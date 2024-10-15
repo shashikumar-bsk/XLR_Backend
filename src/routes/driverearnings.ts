@@ -97,9 +97,9 @@ driverEarningsRouter.get('/', async (req: Request, res: Response) => {
           return res.status(404).send({ message: 'No driver earnings found.' });
         }
   
-        // Store the earnings data in Redis with an expiration time of 3 minutes
+        // Store the earnings data in Redis with an expiration time of 2 seconds
         await redisClient.set(cacheKey, JSON.stringify(driverEarnings));
-        await redisClient.expire(cacheKey, 120);
+        await redisClient.expire(cacheKey, 2);
   
         // Respond with the driver earnings data
         res.status(200).send(driverEarnings);
@@ -139,9 +139,9 @@ driverEarningsRouter.get('/:id', async (req: Request, res: Response) => {
           return res.status(404).send({ message: 'Driver earnings record not found.' });
         }
   
-        // Store the earnings data in Redis with an expiration time of 3 minutes
+        // Store the earnings data in Redis with an expiration time of 2 seconds
         await redisClient.set(cacheKey, JSON.stringify(driverEarnings));
-        await redisClient.expire(cacheKey, 120);
+        await redisClient.expire(cacheKey, 2);
   
         // Respond with the driver earnings data
         res.status(200).send(driverEarnings);
@@ -182,9 +182,9 @@ driverEarningsRouter.get('/driver/:driver_id', async (req: Request, res: Respons
           return res.status(404).send({ message: 'Driver earnings record not found.' });
         }
   
-        // Store the earnings data in Redis with an expiration time of 3 minutes
+        // Store the earnings data in Redis with an expiration time of 2 seconds
         await redisClient.set(cacheKey, JSON.stringify(driverEarnings));
-        await redisClient.expire(cacheKey, 120);
+        await redisClient.expire(cacheKey, 2);
   
         // Respond with the driver earnings data
         res.status(200).send(driverEarnings);

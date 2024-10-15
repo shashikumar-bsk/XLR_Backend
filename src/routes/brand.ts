@@ -61,9 +61,9 @@ BrandRouter.get("/:id", async (req: Request, res: Response) => {
         return res.status(404).send({ message: "Brand not found." });
       }
 
-      // Store the brand details in Redis with an expiration time of 180 seconds (3 minutes)
+      // Store the brand details in Redis with an expiration time of 2 seconds
       await redisClient.set(`brand:${id}`, JSON.stringify(brand));
-      await redisClient.expire(`brand:${id}`, 120);
+      await redisClient.expire(`brand:${id}`, 2);
 
       // Respond with the brand details
       return res.status(200).send(brand);
@@ -99,9 +99,9 @@ BrandRouter.get("/", async (req: Request, res: Response) => {
         return res.status(404).send({ message: "No brands found." });
       }
 
-      // Store the brand list in Redis with an expiration time of 180 seconds (3 minutes)
+      // Store the brand list in Redis with an expiration time of 2 seconds
       await redisClient.set("brands", JSON.stringify(brands));
-      await redisClient.expire("brands", 120);
+      await redisClient.expire("brands", 2);
 
       // Respond with the brand list
       return res.status(200).send(brands);
@@ -182,9 +182,9 @@ BrandRouter.get('/total/count/all', async (req: Request, res: Response) => {
       // If data is not in Redis, fetch from the database
       const totalBrandsCount = await Brand.count();
 
-      // Store the total brands count in Redis with an expiration time of 180 seconds (3 minutes)
+      // Store the total brands count in Redis with an expiration time of 2 seconds
       await redisClient.set('totalBrandsCount', JSON.stringify(totalBrandsCount));
-      await redisClient.expire('totalBrandsCount', 120);
+      await redisClient.expire('totalBrandsCount', 2);
 
       // Respond with the total brands count
       return res.status(200).json({ count: totalBrandsCount });

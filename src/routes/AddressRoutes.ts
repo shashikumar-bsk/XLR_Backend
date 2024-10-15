@@ -100,9 +100,9 @@ AddressRouter.get('/user/:user_id', async (req: Request, res: Response) => {
         return res.status(404).send({ message: 'No addresses found for this user.' });
       }
 
-      // Store the addresses in Redis with an expiration time of 180 seconds (3 minutes)
+      // Store the addresses in Redis with an expiration time of 2 seconds
       await redisClient.set(`addresses:${userId}`, JSON.stringify(addresses));
-      await redisClient.expire(`addresses:${userId}`, 1);
+      await redisClient.expire(`addresses:${userId}`, 2);
 
       // Respond with the addresses
       res.status(200).send({ addresses });
@@ -171,9 +171,9 @@ AddressRouter.get('/details/:address_id', async (req: Request, res: Response) =>
         return res.status(404).send({ message: 'Address not found.' });
       }
 
-      // Store the address details in Redis with an expiration time of 180 seconds (3 minutes)
+      // Store the address details in Redis with an expiration time of 2 seconds
       await redisClient.set(`addressDetails:${address_id}`, JSON.stringify(address));
-      await redisClient.expire(`addressDetails:${address_id}`, 1);
+      await redisClient.expire(`addressDetails:${address_id}`, 2);
 
       // Respond with the address details
       res.status(200).send({ address });
@@ -225,9 +225,9 @@ AddressRouter.get('/', async (req: Request, res: Response) => {
         return res.status(404).send({ message: 'No addresses found.' });
       }
 
-      // Cache all addresses in Redis with a 3-minute expiration
+      // Cache all addresses in Redis with a 2 seconds expiration
       await redisClient.set('allAddresses', JSON.stringify(addresses));
-      await redisClient.expire('allAddresses', 1);
+      await redisClient.expire('allAddresses', 2);
 
       // Respond with the addresses
       return res.status(200).json({ addresses });

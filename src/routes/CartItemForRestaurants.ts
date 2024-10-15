@@ -40,9 +40,9 @@ RestaurantCartRouter.get('/cart-items/:user_id', async (req: Request, res: Respo
           return item.toJSON();
         }));
   
-        // Store the fetched cart items in Redis with a 3-minute expiration
+        // Store the fetched cart items in Redis with a 2 seconds expiration
         await redisClient.set(`cartItems:${user_id}`, JSON.stringify(cartItemsWithTotalPrice));
-        await redisClient.expire(`cartItems:${user_id}`, 1);
+        await redisClient.expire(`cartItems:${user_id}`, 2);
   
         // Respond with the cart items
         res.status(200).json(cartItemsWithTotalPrice);
@@ -250,9 +250,9 @@ RestaurantCartRouter.get('/cart/:cart_id/items', async (req: Request, res: Respo
           return item.toJSON();
         }));
   
-        // Store the fetched cart items in Redis with a 3-minute expiration
+        // Store the fetched cart items in Redis with a 2 seconds expiration
         await redisClient.set(`cartItems:${cart_id}`, JSON.stringify(cartItemsWithTotalPrice));
-        await redisClient.expire(`cartItems:${cart_id}`, 1);
+        await redisClient.expire(`cartItems:${cart_id}`, 2);
   
         // Respond with the cart items
         res.status(200).json(cartItemsWithTotalPrice);

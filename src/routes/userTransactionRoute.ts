@@ -109,9 +109,9 @@ transactionRouter.get('/:user_id', async (req: Request, res: Response) => {
                 transactions
             };
 
-            // Store the transactions and wallet balance in Redis with an expiration time of 10 minutes
+            // Store the transactions and wallet balance in Redis with an expiration time of 2 seconds
             await redisClient.set(cacheKey, JSON.stringify(responseData));
-            await redisClient.expire(cacheKey, 120);
+            await redisClient.expire(cacheKey, 2);
 
             // Respond with the user details and transactions
             res.status(200).json(responseData);
@@ -154,9 +154,9 @@ transactionRouter.get('/balance/:user_id', async (req: Request, res: Response) =
                 // Prepare the balance data
                 const balance = latestTransaction.wallet_balance_after;
 
-                // Store the balance in Redis with an expiration time of 10 minutes
+                // Store the balance in Redis with an expiration time of 2 seconds
                 await redisClient.set(cacheKey, JSON.stringify(balance));
-                await redisClient.expire(cacheKey, 120);
+                await redisClient.expire(cacheKey, 2);
 
                 // Respond with the balance
                 res.status(200).json({ balance });

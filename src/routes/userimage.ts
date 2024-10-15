@@ -115,9 +115,9 @@ UsersRouter.get("/:user_id/profile_image", async (req: Request, res: Response) =
 
       const profileImage = user.profile_image;
 
-      // Store the profile image in Redis with an expiration time of 10 minutes
+      // Store the profile image in Redis with an expiration time of 2 seconds
       await redisClient.set(cacheKey, JSON.stringify(profileImage));
-      await redisClient.expire(cacheKey, 120);
+      await redisClient.expire(cacheKey, 2);
 
       // Respond with the profile image
       res.status(200).json({ profile_image: profileImage });
