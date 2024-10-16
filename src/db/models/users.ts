@@ -107,6 +107,7 @@ interface UserAttributes {
     fcm_token?: string;  // Add FCM token attribute
     title: string;  // Add title attribute
     notification_status: boolean;  // Add notification_status attribute
+    type?:string; // Add type attribute
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -127,7 +128,7 @@ class User extends Model<UserAttributes, UserInput> implements UserAttributes {
     public fcm_token!: string;  // Add FCM token attribute
     public title!: string;  // Add title attribute
     public notification_status!: boolean;  // Add notification_status attribute
-
+    public type!:string; // Add type attribute
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
 }
@@ -185,6 +186,11 @@ User.init({
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true  // Define default value for notification_status
+    },
+    type: {  // Correct syntax for adding type attribute
+        type: DataTypes.STRING,  // Specify the type as STRING
+        allowNull: false,// You can change this to false if it's a required field
+        defaultValue:'user'
     }
 }, {
     timestamps: true,

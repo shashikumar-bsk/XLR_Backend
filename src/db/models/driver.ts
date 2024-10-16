@@ -130,6 +130,9 @@ interface DriverAttributes {
     is_deleted: boolean;
     status: string; // Updated to string type
     profile_image?: string;  // New field for profile image
+    title: string;  // Add title attribute
+    notification_status: boolean;  // Add notification_status attribute
+    type?:string;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -151,6 +154,11 @@ class Driver extends Model<DriverAttributes, DriverInput> implements DriverAttri
     public is_deleted!: boolean;
     public status!: string;  // Updated to string type
     public profile_image!: string;  // New field for storing image URL
+    public title!: string;  // Add title attribute
+    public notification_status!: boolean;  // Add notification_status attribute
+    public type!:string; // Add type attribute
+
+
 
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -181,7 +189,6 @@ Driver.init({
         type: DataTypes.STRING(6), // Allow up to 6 characters for gender (e.g., "Male", "Female")
         allowNull: true
     },
-    
     dob: {
         type: DataTypes.DATE
     },
@@ -211,7 +218,22 @@ Driver.init({
     },
     profile_image: {
         type: DataTypes.STRING,  // New field for storing image URL
-        allowNull: true          // Optional field
+        allowNull: true          // Optional field     
+    },
+    title: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+        defaultValue: 'new driver Registered'  // Set default value for title
+    },
+    notification_status: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true  // Define default value for notification_status
+    },
+    type: {  // Correct syntax for adding type attribute
+        type: DataTypes.STRING,  // Specify the type as STRING
+         allowNull: false ,// You can change this to false if it's a required field
+        defaultValue: 'driver' 
     }
 }, {
     timestamps: true,
