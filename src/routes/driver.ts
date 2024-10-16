@@ -130,52 +130,52 @@ DriverRouter.get("/", async (req: Request, res: Response) => {
 });
 
 // Update driver
-DriverRouter.patch("/:id", async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
+// DriverRouter.patch("/:id", async (req: Request, res: Response) => {
+//   try {
+//     const { id } = req.params;
 
-    const { active } = req.body;
-    if (typeof active !== 'boolean') {
-      return res.status(400).send({ message: "Please provide a valid active status." });
-    }
+//     const { active } = req.body;
+//     if (typeof active !== 'boolean') {
+//       return res.status(400).send({ message: "Please provide a valid active status." });
+//     }
 
-    const { first_name, last_name, email, password, vehicle_number, gender, dob, vehicle_type, active, phone } = req.body;
-
-
-    const driver = await Driver.findOne({ where: { driver_id: id, is_deleted: false } });
-
-    if (!driver) {
-      return res.status(404).send({ message: "Driver not found." });
-    }
-
-    // Create driver_name from first_name and last_name
-    const driver_name = `${first_name} ${last_name}`;
-
-    // Update driver object
-    const updateDriverObject: any = {
-      driver_name,
-      email,
-      password,
-      gender,
-      dob,
-      vehicle_type,
-      vehicle_number,
-      active,
-      phone
-    };
-
-    // Update driver using Sequelize model
-    await Driver.update(updateDriverObject, { where: { driver_id: id } });
-
-    return res.status(200).send({ message: "Driver updated successfully" });
-  } catch (error: any) {
-    console.error("Error in updating driver:", error);
-    return res.status(500).send({ message: `Error in updating driver: ${error.message}` });
-  }
-});
+//     const { first_name, last_name, email, password, vehicle_number, gender, dob, vehicle_type, active, phone } = req.body;
 
 
-////update all driver.
+//     const driver = await Driver.findOne({ where: { driver_id: id, is_deleted: false } });
+
+//     if (!driver) {
+//       return res.status(404).send({ message: "Driver not found." });
+//     }
+
+//     // Create driver_name from first_name and last_name
+//     const driver_name = `${first_name} ${last_name}`;
+
+//     // Update driver object
+//     const updateDriverObject: any = {
+//       driver_name,
+//       email,
+//       password,
+//       gender,
+//       dob,
+//       vehicle_type,
+//       vehicle_number,
+//       active,
+//       phone
+//     };
+
+//     // Update driver using Sequelize model
+//     await Driver.update(updateDriverObject, { where: { driver_id: id } });
+
+//     return res.status(200).send({ message: "Driver updated successfully" });
+//   } catch (error: any) {
+//     console.error("Error in updating driver:", error);
+//     return res.status(500).send({ message: `Error in updating driver: ${error.message}` });
+//   }
+// });
+
+
+//update all driver.
 DriverRouter.patch("/:id/upadate", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
