@@ -3,6 +3,8 @@ import Driver from '../db/models/driver';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
+import { where } from 'sequelize';
+
 
 dotenv.config();
 const DriverOTPRouter = express.Router();
@@ -20,45 +22,62 @@ if (!CLIENT_ID || !CLIENT_SECRET || !APP_ID || !JWT_SECRET) {
 
 // Temporary storage for demonstration purposes
 DriverOTPRouter.post('/send-otp', async (req: Request, res: Response) => {
-  const { phone } = req.body;
-
-  if (!phone) {
-    return res.status(400).json({ error: 'Phone number is required' });
-  }
-
-  // Sanitize and validate phone number
-  const sanitizedPhone = phone.replace(/\D/g, '');
-  if (sanitizedPhone.length < 10 || sanitizedPhone.length > 15) {
-    return res.status(400).json({ error: 'Invalid phone number format' });
-  }
-
   try {
-    const response = await axios.post('https://auth.otpless.app/auth/otp/v1/send', {
-      phoneNumber: 91+sanitizedPhone,
-      otpLength: 4,
-      channel: 'WHATSAPP',
-      expiry: 600
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'clientId': CLIENT_ID,
-        'clientSecret': CLIENT_SECRET,
-        'appId': APP_ID
-      }
+    const { phone } = req.body;
+
+    // Validate phone number
+    if (!phone) {
+      return res.status(400).json({ error: 'Phone number is required' });
+    }
+
+    const sanitizedPhone = phone.replace(/\D/g, ''); // Remove non-digit characters
+    if (sanitizedPhone.length < 10 || sanitizedPhone.length > 15) {
+      return res.status(400).json({ error: 'Invalid phone number format' });
+    }
+
+    // Check if the driver exists and is active
+    const existingDriver = await Driver.findOne({
+      where: {
+        phone: sanitizedPhone,
+        active: true // Use a boolean value directly, not a string.
+      },
     });
 
-    console.log('OTP send response:', response.data); // Log the full response for debugging
+    if (!existingDriver) {
+      return res.status(404).json({ error: 'Driver is inactive or not found' });
+    }
 
-    if (response.data.orderId) { // Check if orderId is present
-      // Save OTP orderId to database if needed
-      res.json({ message: 'OTP sent successfully', orderId: response.data.orderId });
+    // Send OTP via external service
+    const otpResponse = await axios.post(
+      'https://auth.otpless.app/auth/otp/v1/send',
+      {
+        phoneNumber: `91${sanitizedPhone}`, // Prefix with country code
+        otpLength: 4,
+        channel: 'WHATSAPP',
+        expiry: 600, // OTP expiry in seconds (10 minutes)
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          clientId: CLIENT_ID,
+          clientSecret: CLIENT_SECRET,
+          appId: APP_ID,
+        },
+      }
+    );
+
+    console.log('OTP send response:', otpResponse.data);
+
+    if (otpResponse.data.orderId) {
+      // Optionally save orderId to DB for future reference
+      res.json({ message: 'OTP sent successfully', orderId: otpResponse.data.orderId });
     } else {
-      throw new Error(`Failed to send OTP: ${response.data.message || 'Unknown error'}`);
+      throw new Error(`OTP service error: ${otpResponse.data.message || 'Unknown error'}`);
     }
   } catch (error: any) {
     console.error('Error sending OTP:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
-      error: `Failed to send OTP: ${error.response?.data?.message || error.message}`
+      error: `Failed to send OTP: ${error.response?.data?.message || error.message}`,
     });
   }
 });
