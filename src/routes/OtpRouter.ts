@@ -27,31 +27,47 @@ OTPRouter.post('/send-otp', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Phone number is required' });
   }
 
-  // Sanitize and validate phone number
-  const sanitizedPhone = phone.replace(/\D/g, '');
+  // Sanitize and validate the phone number
+  const sanitizedPhone = phone.replace(/\D/g, ''); // Remove non-digit characters
   if (sanitizedPhone.length < 10 || sanitizedPhone.length > 15) {
     return res.status(400).json({ error: 'Invalid phone number format' });
   }
 
+  // Check if the user exists
+  const existingUser = await User.findOne({
+    where: {
+      phone: sanitizedPhone,
+      active: true, // Use a boolean value directly, not a string.
+    },
+  });
+
+  if (!existingUser) {
+    return res.status(404).json({ error: 'User is inactive' });
+  }
+
   try {
-    const response = await axios.post('https://auth.otpless.app/auth/otp/v1/send', {
-      phoneNumber: 91+sanitizedPhone,
-      otpLength: 4,
-      channel: 'WHATSAPP',
-      expiry: 600
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'clientId': CLIENT_ID,
-        'clientSecret': CLIENT_SECRET,
-        'appId': APP_ID
+    // Send OTP via external service
+    const response = await axios.post(
+      'https://auth.otpless.app/auth/otp/v1/send',
+      {
+        phoneNumber: `91${sanitizedPhone}`, // Prefix with country code
+        otpLength: 4,
+        channel: 'WHATSAPP',
+        expiry: 600, // OTP expires in 10 minutes
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          clientId: CLIENT_ID,
+          clientSecret: CLIENT_SECRET,
+          appId: APP_ID,
+        },
       }
-    });
+    );
 
-    console.log('OTP send response:', response.data); // Log the full response for debugging
+    console.log('OTP send response:', response.data);
 
-    if (response.data.orderId) { // Check if orderId is present
-      // Save OTP orderId to database if needed
+    if (response.data.orderId) {
       res.json({ message: 'OTP sent successfully', orderId: response.data.orderId });
     } else {
       throw new Error(`Failed to send OTP: ${response.data.message || 'Unknown error'}`);
@@ -59,7 +75,7 @@ OTPRouter.post('/send-otp', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error sending OTP:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
-      error: `Failed to send OTP: ${error.response?.data?.message || error.message}`
+      error: `Failed to send OTP: ${error.response?.data?.message || error.message}`,
     });
   }
 });
