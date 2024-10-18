@@ -21,7 +21,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const axios_1 = __importDefault(require("axios"));
-const redis_1 = __importDefault(require("../../src/redis/redis"));
+const redis_1 = __importDefault(require("../redis/redis"));
 require('dotenv').config();
 const AdminRouter = express_1.default.Router();
 const API_KEY = process.env.API_KEY;
