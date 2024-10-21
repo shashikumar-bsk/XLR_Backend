@@ -1,291 +1,345 @@
-import { Kafka, logLevel } from 'kafkajs';
-import { RideRequest } from '../db/models';
-import { Server as SocketIOServer, Socket } from 'socket.io';
+import { Socket as SocketIOSocket, Server as SocketIOServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
-import redisClient from '../redis/redis';
-import { createAdapter } from '@socket.io/redis-adapter';
+import redis from '../redis/redis';
+import vehicleBooking from '../db/models/vehicleBooking';
 
-let io: SocketIOServer;
-
-export const initializeSocket = (server: HttpServer): SocketIOServer => {
-  io = new SocketIOServer(server, {
-    cors: {
-      origin: '*', // Allow all origins or specify your frontend origin
-      methods: ['GET', 'POST'],
-    },
-  });
-
-  const pubClient = redisClient.duplicate();
-  const subClient = redisClient.duplicate();
-  io.adapter(createAdapter(pubClient, subClient));
-
-  // Run Kafka only after the io instance is initialized
-  runKafka(io).catch(console.error);
-
-  return io;
-};
-
-const drivers: { [key: string]: Socket } = {};
-const users: { [key: string]: Socket } = {}; // Store user sockets
-const pendingRides: { [key: string]: any } = {}; // Cache for pending rides
-
-// Initialize Kafka
-const kafka = new Kafka({
-  clientId: 'ride-booking-app',
-  brokers: ['localhost:9092'],
-  logLevel: logLevel.ERROR, // Set log level to ERROR
-});
-
-const producer = kafka.producer();
-const consumer = kafka.consumer({ groupId: 'ride-booking-group' });
-
-async function runKafka(io: SocketIOServer) {
-  await producer.connect();
-  await consumer.connect();
-  console.log("Kafka connected");
-
-  await consumer.subscribe({ topic: 'ride-requests', fromBeginning: true });
-  await consumer.subscribe({ topic: 'ride-accepted', fromBeginning: true });
-  await consumer.subscribe({ topic: 'ride-completed', fromBeginning: true });
-  await consumer.subscribe({ topic: 'driver-location', fromBeginning: true });
-
-  await consumer.run({
-    eachMessage: async ({ topic, message }) => {
-      const data = JSON.parse((message.value ?? '{}').toString());
-
-      switch (topic) {
-        case 'ride-requests':
-          if (data.status === 'pending') {
-            // Store pending ride in cache
-            pendingRides[data.bookingId] = data;
-
-            Object.values(drivers).forEach((socket) => {
-              // Emit the filled ride request data to the driver
-              socket.emit('PENDING_RIDE_REQUEST', data);
-            });
-          }
-          break;
-        case 'ride-accepted':
-          io.emit('RIDE_ACCEPTED', data);
-          if (users[data.userId]) {
-            users[data.userId].emit('RIDE_ACCEPTED', {
-              request_id: data.bookingId,
-              user_id: data.userId,
-              driver_id: data.driverId,
-              service_type_id: data.serviceType,
-              receiver_id: data.receiverId,
-              booking_id: data.bookingId,
-              status: data.status,
-              rideDetails: pendingRides[data.bookingId],
-            });
-          }
-
-          // Update the ride in the cache and database
-          if (pendingRides[data.bookingId]) {
-            pendingRides[data.bookingId].status = 'accepted';
-            pendingRides[data.bookingId].driverId = data.driverId;
-            await RideRequest.upsert(pendingRides[data.bookingId]);
-          }
-          break;
-        case 'ride-completed':
-          io.emit('RIDE_COMPLETED', data);
-          // Emit to the user who made the request
-          if (users[data.userId]) {
-            users[data.userId].emit('RIDE_COMPLETED', data);
-          }
-          // Update the ride in the cache and database
-          if (pendingRides[data.bookingId]) {
-            pendingRides[data.bookingId].status = 'completed';
-            pendingRides[data.bookingId].driverId = data.driverId;
-            await RideRequest.upsert(pendingRides[data.bookingId]);
-            delete pendingRides[data.bookingId];
-          }
-          break;
-      }
-    },
-  });
-
-  // Periodically sync data to the database every 10 seconds
-  setInterval(async () => {
-    for (const bookingId in pendingRides) {
-      const ride = pendingRides[bookingId];
-      await RideRequest.upsert(ride);
-    }
-  }, 10000); // Sync every 10 seconds
+// Driver interface
+interface Driver {
+  driverId: number;
+  vehicleType: string;
+  latitude: number;
+  longitude: number;
+  drivername:string,
+  phone:string,
+  socketId: string; // Driver's socketId
 }
 
-// Socket event handlers for both ride and chat functionality
+// BookingData interface
+interface BookingData {
+  bookingId: string;
+  userId: number;
+  driverId: number;
+  pickupAddress: {
+    name:string;
+    latitude: number;
+    longitude: number;
+  };
+  dropoffAddress: {
+    name: string;
+    latitude: number;
+    longitude: number;
+  };
+  totalPrice: number;
+  vehicleName: string;
+  sender_name:string,
+  sender_phone:string,
+  receiver_name:string,
+  receiver_phone:string,
+
+}
+
+// Store active drivers
+const activeDrivers: Record<number, Driver> = {};
+
+// Store active user bookings (optional if you want to map user booking to user socketId)
+const activeUserBookings: Record<string, string> = {}; // Maps bookingId to user socketId
+
+// Haversine formula to calculate distance between two coordinates
+const haversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const toRad = (value: number): number => (value * Math.PI) / 180;
+
+  const R = 6371; // Radius of the Earth in kilometers
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // Distance in kilometers
+};
+
+// Function to initialize the socket server (for both users and drivers)
+export const initializeSocket = (server: HttpServer) => {
+  const io = new SocketIOServer(server, {
+    cors: {
+      origin: '*',
+      methods: ["GET", "POST"],
+    },
+  });
+  return io;
+};
+
+// Function to handle socket events for users and drivers
 export const socketHandlers = (io: SocketIOServer) => {
-  io.on('connection', (socket: Socket) => {
-    console.log('A client connected:', socket.id);
+  io.on('connection', (socket: SocketIOSocket) => {
+    console.log('Client connected:', socket.id);
 
-    // Chat functionality
-    socket.on('sendMessage', (message) => {
-      console.log('Message received:', message);
-
-      // Broadcast the message to all connected clients except the sender
-      socket.broadcast.emit('receiveMessage', message);
-      // Bot response logic
-      let botReply = null;
-
-      if (message.text.toLowerCase().includes('hi')) {
-        botReply = {
-          text: 'Hello! How can I assist you today?',
-          sender: 'bot',
-          timestamp: new Date().toISOString(),
-        };
-      } else if (message.text.toLowerCase().includes('bye')) {
-        botReply = {
-          text: 'Goodbye! Have a great day!',
-          sender: 'bot',
-          timestamp: new Date().toISOString(),
-        };
-      } else if (message.text.toLowerCase().includes('help')) {
-        botReply = {
-          text: 'I can help you with ride bookings, cancellations, and more. What do you need help with?',
-          sender: 'bot',
-          timestamp: new Date().toISOString(),
-        };
+    /* -------------------- USER SOCKET HANDLERS -------------------- */
+    socket.on('REQUEST_BOOKING', async (bookingData: BookingData) => {
+      const {
+        bookingId,
+        userId,
+        driverId,
+        pickupAddress,
+        dropoffAddress,
+        totalPrice,
+        vehicleName,
+        sender_name,
+        sender_phone,
+        receiver_name,
+        receiver_phone,
+      } = bookingData;
+    
+      console.log(`Booking request received from user ${userId} for driver ${driverId}`);
+    
+      const driver = activeDrivers[driverId];
+      if (driver) {
+        try {
+          await redis.set(`booking:${bookingId}`, JSON.stringify(bookingData), 'EX', 3600); // Store booking in Redis
+          console.log(`Stored booking data in Redis for bookingId: ${bookingId}`);
+        } catch (err: any) {
+          console.error(`Failed to store booking in Redis: ${err.message}`);
+          socket.emit('bookingError', 'Internal server error while processing booking.');
+          return;
+        }
+    
+        // Emit ride request to the initially assigned driver
+        io.to(driver.socketId).emit('BOOKING_REQUEST', {
+          bookingId,
+          userId,
+          driverId, // Include the driverId
+          pickupAddress,
+          dropoffAddress,
+          totalPrice,
+          vehicleName,
+          sender_name,
+          sender_phone,
+          receiver_name,
+          receiver_phone,
+        });
+    
+        console.log(`Ride request emitted to driver ${driver.driverId}`);
+    
+        // Store the user socketId and bookingId mapping
+        activeUserBookings[bookingId] = socket.id;
+    
       } else {
-        botReply = {
-          text: 'I didn’t quite catch that. Can you please rephrase?',
-          sender: 'bot',
-          timestamp: new Date().toISOString(),
+        console.log(`Driver ${driverId} not found or not connected.`);
+        const availableDrivers = Object.values(activeDrivers).filter(
+          (d) => d.vehicleType === bookingData.vehicleName
+        );
+    
+        if (availableDrivers.length > 0) {
+          const newDriver = availableDrivers[0]; // Optionally implement more complex selection logic here
+          console.log(`Assigning booking to another driver ${newDriver.driverId}`);
+    
+          // Emit ride request to the newly assigned driver, including the new driver's ID
+          io.to(newDriver.socketId).emit('BOOKING_REQUEST', {
+            bookingId,
+            userId,
+            driverId: newDriver.driverId, // Use the new driver's ID
+            pickupAddress,
+            dropoffAddress,
+            totalPrice,
+            vehicleName,
+            sender_name,
+            sender_phone,
+            receiver_name,
+            receiver_phone,
+          });
+        } else {
+          socket.emit('bookingError', 'No drivers available with the matching vehicle type.');
+        }
+      }
+    });
+    
+
+    /* -------------------- DRIVER SOCKET HANDLERS -------------------- */
+    socket.on('DRIVER_RESPONSE', async (response: { 
+      driverId: string; 
+      bookingId: string; 
+      status: string; 
+    }) => {
+      const { driverId, bookingId, status } = response;
+    
+      const userSocketId = activeUserBookings[bookingId]; // Get the user's socket ID
+    
+      if (userSocketId) {
+        if (status === 'accepted') {
+          console.log("Status sent to ", userSocketId);
+    
+          try {
+            // Fetch driver details from Redis
+            const driverData = await redis.get(`driver:${driverId}`);
+            if (!driverData) {
+              console.error(`Driver data for driverId: ${driverId} not found in Redis`);
+              return;
+            }
+    
+            const { drivername, phone } = JSON.parse(driverData);
+    
+            // Emit ride status with driver details to the user
+            io.to(userSocketId).emit('rideRequestStatus', { 
+              bookingId, 
+              driverId,
+              status: 'accepted',
+              drivername,  // Driver's name fetched from Redis
+              phone        // Driver's phone number fetched from Redis
+            });
+            console.log("Emitted to user", { 
+              bookingId, 
+              driverId,
+              status: 'accepted',
+              drivername,  
+              phone        
+            });
+    
+            // Fetch the booking data and update status in Redis
+            const bookingData = await redis.get(`booking:${bookingId}`);
+            if (bookingData) {
+              const updatedBooking = { 
+                ...JSON.parse(bookingData), 
+                status: 'accepted',
+                drivername,  
+                phone        
+              };
+    
+              // Save the updated booking data back to Redis
+              await redis.set(`booking:${bookingId}`, JSON.stringify(updatedBooking), 'EX', 3600);
+              console.log(`Updated Redis booking for bookingId: ${bookingId}`);
+            }
+    
+            // Update the booking status in the database to "In progress"
+            const bookingRecord = await vehicleBooking.findOne({ where: { id: bookingId } });
+            if (bookingRecord) {
+              bookingRecord.status = 'In progress'; // Update status to "In progress"
+              await bookingRecord.save(); // Save the changes
+              console.log(`Updated booking status to 'In progress' for bookingId: ${bookingId}`);
+            } else {
+              console.error(`No booking found with bookingId: ${bookingId}`);
+            }
+          } catch (err: any) {
+            console.error(`Failed to fetch driver or update booking in Redis: ${err.message}`);
+          }
+    
+          console.log(`Driver ${driverId} accepted ride ${bookingId}`);
+        } else {
+          io.to(userSocketId).emit('rideRequestStatus', { 
+            bookingId, 
+            status: 'rejected' 
+          });
+          console.log(`Driver ${driverId} rejected ride ${bookingId}`);
+        }
+      } else {
+        console.log(`User for booking ${bookingId} not found`);
+      }
+    });
+    
+
+    /* -------------------- DRIVER SOCKET HANDLERS -------------------- */
+    // Driver registers on connection
+socket.on('REGISTER_DRIVER', async (driverData: Omit<Driver, 'socketId'>) => {
+  const { driverId, vehicleType, latitude, longitude, drivername, phone } = driverData;
+
+  // Log driver data for debugging
+  console.log("Registered driver", driverId, vehicleType, latitude, longitude, drivername, phone);
+
+  // Create the driver object to store
+  const driverDetails = {
+    driverId,
+    vehicleType,
+    latitude,
+    longitude,
+    drivername,
+    phone,
+    socketId: socket.id, // Store driver's socket ID
+  };
+
+  // Store driver in activeDrivers list (local memory)
+  activeDrivers[driverId] = driverDetails;
+
+  // Convert the driver object to a JSON string for Redis
+  const driverKey = `driver:${driverId}`;
+  try {
+    await redis.set(driverKey, JSON.stringify(driverDetails));
+    console.log(`Driver data stored in Redis successfully: ${driverId}`);
+  } catch (error) {
+    console.error(`Error storing driver data in Redis: ${error}`);
+  }
+  console.log(`Driver registered successfully: ${driverId}`);
+});
+
+
+ 
+    /* -------------------- DRIVER LOCATION UPDATES -------------------- */
+    socket.on("driverLocation", (data: { vehicleType: string; driverId: number; latitude: number; longitude: number; drivername:string; phone:string }) => {
+      const existingDriver = activeDrivers[data.driverId];
+
+      // Update driver's location if they already exist
+      if (existingDriver) {
+        existingDriver.latitude = data.latitude;
+        existingDriver.longitude = data.longitude;
+      } else {
+        // Add new driver if they don't exist
+        activeDrivers[data.driverId] = {
+          driverId: data.driverId,
+          vehicleType: data.vehicleType,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          drivername: data.drivername,
+          phone: data.phone,
+          socketId: socket.id,
         };
       }
 
-      // Emit the bot's reply if it exists
-      if (botReply) {
-        io.emit('receiveMessage', botReply);
-      }
-    });
-    // Driver registration for ride requests
-    socket.on('REGISTER_DRIVER', (data) => {
-      drivers[data.driverId] = socket;
-
-      // Emit all pending rides to the connected driver
-      Object.values(pendingRides).forEach((ride) => {
-        if (ride.status === 'pending') {
-          socket.emit('PENDING_RIDE_REQUEST', ride);
-        }
-      });
+      // Broadcast updated driver locations to all clients (optional)
+      io.emit("driverLocationsUpdated", activeDrivers);
     });
 
-    // Handle ride requests
-    socket.on('REQUEST_RIDE', async (data) => {
-      const rideRequest = {
-        rideBookingId: 'ride_' + Math.random().toString(36).substr(2, 9),
-        userId: data.userId,
-        driverId: data.driverId,
-        startLocation: data.startLocation,
-        endLocation: data.endLocation,
-        fare: data.fare,
-        status: 'pending',
-        distance: data.distance,
-        duration: data.duration,
-        time: new Date().toISOString(),
-        bookingFee: data.bookingFee,
-        rideCharge: data.rideCharge,
-      };
+    /* -------------------- USER REQUESTS NEARBY DRIVERS -------------------- */
+    socket.on("requestNearbyDrivers", (data: { latitude: number; longitude: number; radius: number }) => {
+      const userLatitude = data.latitude;
+      const userLongitude = data.longitude;
 
-      await producer.send({
-        topic: 'ride-requests',
-        messages: [
-          {
-            value: JSON.stringify(rideRequest),
-          },
-        ],
+      // Filter drivers based on the user's location and the specified radius
+      const nearbyDrivers = Object.values(activeDrivers).filter((driver) => {
+        const distance = haversineDistance(userLatitude, userLongitude, driver.latitude, driver.longitude);
+        return distance <= (data.radius || 5); // Default radius to 5 km if not specified
       });
 
-      // Store in pending rides cache
-      pendingRides[rideRequest.rideBookingId] = rideRequest;
-
-      // Store user socket
-      users[data.userId] = socket;
-
-      socket.emit('RIDE_REQUEST_SENT', { rideBookingId: rideRequest.rideBookingId });
+      // Send the nearby drivers back to the user who requested it
+      socket.emit("nearbyDrivers", nearbyDrivers);
+      console.log("Nearby drivers", nearbyDrivers);
     });
 
-    // Ride acceptance
-    socket.on('ACCEPT_RIDE', async (data) => {
-      const rideAcceptance = {
-        bookingId: data.bookingId,
-        driverId: data.driverId,
-        userId: data.userId,
-        status: 'accepted',
-      };
-
-      await producer.send({
-        topic: 'ride-accepted',
-        messages: [
-          {
-            value: JSON.stringify(rideAcceptance),
-          },
-        ],
-      });
-
-      // Update the ride in the cache and database
-      if (pendingRides[data.bookingId]) {
-        pendingRides[data.bookingId].status = 'accepted';
-        pendingRides[data.bookingId].driverId = data.driverId;
-        await RideRequest.upsert(pendingRides[data.bookingId]);
-      }
-    });
-
-    // Ride completion
-    socket.on('COMPLETE_RIDE', async (data) => {
-      const rideCompletion = {
-        bookingId: data.bookingId,
-        driverId: data.driverId,
-        userId: data.userId,
-        status: 'completed',
-      };
-
-      await producer.send({
-        topic: 'ride-completed',
-        messages: [
-          {
-            value: JSON.stringify(rideCompletion),
-          },
-        ],
-      });
-
-      // Update the ride in the cache and database
-      if (pendingRides[data.bookingId]) {
-        pendingRides[data.bookingId].status = 'completed';
-        await RideRequest.upsert(pendingRides[data.bookingId]);
-        delete pendingRides[data.bookingId];
-      }
-    });
-
-    // User registration
-    socket.on('REGISTER_USER', (data) => {
-      users[data.userId] = socket;
-    });
-
-    // Handle user disconnection
+    /* -------------------- DISCONNECTION HANDLER -------------------- */
     socket.on('disconnect', () => {
-      for (const driverId in drivers) {
-        if (drivers[driverId] === socket) {
-          delete drivers[driverId];
+      console.log(`Client disconnected: ${socket.id}`);
+
+      // Remove driver from active list on disconnect
+      for (const driverId in activeDrivers) {
+        if (activeDrivers[driverId].socketId === socket.id) {
+          console.log(`Driver ${driverId} disconnected`);
+          delete activeDrivers[driverId];
           break;
         }
       }
-      for (const userId in users) {
-        if (users[userId] === socket) {
-          delete users[userId];
+
+      // Optionally remove the user booking when they disconnect (if needed)
+      for (const bookingId in activeUserBookings) {
+        if (activeUserBookings[bookingId] === socket.id) {
+          delete activeUserBookings[bookingId];
           break;
         }
       }
-      console.log('A client disconnected:', socket.id);
     });
   });
 };
+function emitBookingRequest(newDriver: Driver, bookingData: BookingData, arg2: number) {
+  throw new Error('Function not implemented.');
+}
 
-// Function to get the initialized Socket.io instance
-export const getSocketInstance = (): SocketIOServer => {
-  if (!io) {
-    throw new Error('Socket.io not initialized. Call initializeSocket first.');
-  }
-  return io;
-};

@@ -10,10 +10,10 @@ const instamartOrderRouter = express.Router();
 // Create a new InstamartOrder
 instamartOrderRouter.post('/create', async (req: Request, res: Response) => {
   try {
-    const { user_id, total_price, Instamartorder_status, payment_method, address_id, cart_id, quantity } = req.body;
+    const { user_id, total_price, Instamartorder_status, payment_method, address_id, quantity } = req.body;
 
     // Validate required fields
-    if (!user_id || !total_price || !Instamartorder_status || !payment_method || !address_id || !cart_id || !quantity) {
+    if (!user_id || !total_price || !Instamartorder_status || !payment_method || !address_id ||  !quantity) {
       return res.status(400).json({ message: 'Missing required fields: user_id, total_price, Instamartorder_status, payment_method, address_id, cart_id, quantity' });
     }
 
@@ -24,27 +24,17 @@ instamartOrderRouter.post('/create', async (req: Request, res: Response) => {
       total_price,
       Instamartorder_status,
       payment_method,
-      cart_id,
       quantity,
     });
 
-    // Fetch items from the user's cart
-    const cartItems = await AddToCart.findAll({ where: { cart_id } });
-
-    if (cartItems.length === 0) {
-      return res.status(400).json({ message: 'Cart is empty' });
-    }
-
-    // Iterate over the cart items and create InstamartOrderItem records
-    for (const item of cartItems) {
+    
       await instamartOrderItem.create({
-        Instamartorder_id: newInstamartOrder.Instamartorder_id, // Ensure you use the correct field name
-        cart_id: item.cart_id,
-        quantity: item.quantity,
-        price: item.price,
+        Instamartorder_id: newInstamartOrder.Instamartorder_id,
+        quantity: newInstamartOrder.quantity,
+        price: newInstamartOrder.total_price,
         is_deleted: false, // Add the is_deleted field with a default value
       });
-    } 
+    
 
      // Clear the user's cart after the order is placed
      await AddToCart.destroy({ where: { user_id } });
@@ -93,7 +83,7 @@ instamartOrderRouter.get('/:Instamartorder_id', async (req: Request, res: Respon
 instamartOrderRouter.patch('/:Instamartorder_id', async (req: Request, res: Response) => {
   try {
     const { Instamartorder_id } = req.params;
-    const { user_id, total_price, Instamartorder_status, payment_method, address_id, cart_id, quantity } = req.body;
+    const { user_id, total_price, Instamartorder_status, payment_method, address_id, quantity } = req.body;
 
     const [updated] = await InstamartOrder.update({
       user_id,
@@ -101,7 +91,6 @@ instamartOrderRouter.patch('/:Instamartorder_id', async (req: Request, res: Resp
       Instamartorder_status,
       payment_method,
       address_id,
-      cart_id,
       quantity,
     }, {
       where: { Instamartorder_id },
