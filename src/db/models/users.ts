@@ -90,6 +90,8 @@
 
 
 // models/user.ts
+
+
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelizeConnection from '../config';
 

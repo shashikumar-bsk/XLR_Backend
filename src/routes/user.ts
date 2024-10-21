@@ -242,10 +242,6 @@ UserRouter.patch("/:id", async (req: Request, res: Response) => {
   }
 });
 
-
-
-
-
 // Soft delete user (set is_deleted to true)
 UserRouter.delete("/:id", async (req: Request, res: Response) => {
   try {
