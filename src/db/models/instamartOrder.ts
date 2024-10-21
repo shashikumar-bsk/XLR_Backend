@@ -1,8 +1,7 @@
 import { Model, DataTypes, Optional } from 'sequelize';
 import sequelizeConnection from '../config'; // Adjust the path as necessary
 import User from './users';
-import Address from './Address'; // Adjust the path to the Address model as necessary
-import AddToCart from './add_to_cart';
+import Address from './Address'; 
 
 // Define the attributes for the InstamartOrder model
 export interface InstamartOrderAttributes {
@@ -12,7 +11,6 @@ export interface InstamartOrderAttributes {
   total_price: number; // renamed from totalPayment_price
   Instamartorder_status: 'pending' | 'completed' | 'cancelled';
   payment_method: 'cash_on_delivery' | 'online';
-  cart_id: number;
   quantity: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -29,7 +27,6 @@ class InstamartOrder extends Model<InstamartOrderAttributes, InstamartOrderCreat
   public total_price!: number;
   public Instamartorder_status!: 'pending' | 'completed' | 'cancelled';
   public payment_method!: 'cash_on_delivery' | 'online';
-  public cart_id!: number;
   public quantity!: number;
 
   public readonly createdAt!: Date;
@@ -71,14 +68,7 @@ InstamartOrder.init({
     type: DataTypes.ENUM('cash_on_delivery', 'online'),
     allowNull: false,
   },
-  cart_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: AddToCart,
-      key: 'cart_id',
-  },
-},
+
   quantity: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -102,6 +92,5 @@ InstamartOrder.init({
 InstamartOrder.belongsTo(User, { foreignKey: 'user_id' });
 User.hasMany(InstamartOrder, { foreignKey: 'user_id' });
 InstamartOrder.belongsTo(Address, { foreignKey: 'address_id' });
-InstamartOrder.belongsTo(AddToCart, { foreignKey: 'cart_id' });
 
 export default InstamartOrder;

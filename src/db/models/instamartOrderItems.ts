@@ -6,7 +6,6 @@ import AddToCart from './add_to_cart';
 interface instamartOrderItemAttributes {
   order_item_id: number;
   Instamartorder_id: number;
-  cart_id: number;
   quantity: number;
   price: number;
   is_deleted: boolean;
@@ -21,7 +20,6 @@ export interface instamartOrderItemOutput extends Required<instamartOrderItemAtt
 class instamartOrderItem extends Model<instamartOrderItemAttributes, instamartOrderItemInput> implements instamartOrderItemAttributes {
   public order_item_id!: number;
   public Instamartorder_id!: number;
-  public cart_id!: number;
   public quantity!: number;
   public price!: number;
   public is_deleted!: boolean;
@@ -42,14 +40,6 @@ instamartOrderItem.init({
     references: {
       model: InstamartOrder,
       key: 'instamartorder_id',
-    },
-    allowNull: false,
-  },
-  cart_id: {
-    type: DataTypes.INTEGER,
-    references: {
-      model: AddToCart,
-      key: 'cart_id',
     },
     allowNull: false,
   },
@@ -77,6 +67,5 @@ instamartOrderItem.init({
 });
 
 instamartOrderItem.belongsTo(InstamartOrder, { foreignKey: 'instamartorder_id', as: 'order' });
-instamartOrderItem.belongsTo(AddToCart, { foreignKey: 'cart_id', as: 'cart' });
 
 export default instamartOrderItem;

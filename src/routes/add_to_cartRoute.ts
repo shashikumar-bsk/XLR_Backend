@@ -289,7 +289,7 @@ cartRouter.delete('/:user_id', async (req, res) => {
     try {
         // Permanently delete all items in the cart for the given user_id
         const deletedCount = await AddToCart.destroy({
-            where: { user_id }
+            where: { user_id: user_id, is_deleted: false } 
         });
 
         console.log(`Deleted ${deletedCount} items for user_id: ${user_id}`); // Debugging line
