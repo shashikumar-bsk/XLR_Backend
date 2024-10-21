@@ -90,6 +90,8 @@
 
 
 // models/user.ts
+
+
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelizeConnection from '../config';
 
@@ -150,7 +152,7 @@ User.init({
     },
     password: {
         type: DataTypes.STRING(255),
-        allowNull: false
+        allowNull: true
     },
     gender: {
         type: DataTypes.STRING(1)
