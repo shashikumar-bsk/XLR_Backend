@@ -150,7 +150,7 @@ User.init({
     },
     password: {
         type: DataTypes.STRING(255),
-        allowNull: false
+        allowNull: true
     },
     gender: {
         type: DataTypes.STRING(1)

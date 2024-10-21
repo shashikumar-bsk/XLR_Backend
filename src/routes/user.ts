@@ -160,27 +160,60 @@ UserRouter.get("/", async (req: Request, res: Response) => {
 
 
 // Update user
+// UserRouter.patch("/:id", async (req: Request, res: Response) => {
+//   try {
+//     const { id } = req.params;
+//     const { firstname, lastname, email, mobile_number, gender, password } = req.body;
+
+//     const user = await User.findOne({ where: { id, is_deleted: false } });
+
+//     if (!user) {
+//       return res.status(404).send({ message: "User not found." });
+//     }
+
+//     // Concatenate firstname and lastname to form username
+//     const username = `${firstname} ${lastname}`;
+
+//     // Update user object
+//     const updateUserObject: any = {
+//       username,
+//       email,
+//       mobile_number,
+//       gender,
+//       password
+//     };
+
+    // Update user using Sequelize model
+//     await User.update(updateUserObject, { where: { id } });
+
+//     return res.status(200).send({ message: "User updated successfully" });
+//   } catch (error: any) {
+//     console.error("Error in updating user:", error);
+//     return res.status(500).send({ message: `Error in updating user: ${error.message}` });
+//   }
+// });
+
+
 UserRouter.patch("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { firstname, lastname, email, mobile_number, gender, password } = req.body;
+    const { username, email, phone, gender } = req.body;
 
+    console.log("Update request body:", req.body); // Log the request body
+
+    // Fetch user by id and check if not deleted
     const user = await User.findOne({ where: { id, is_deleted: false } });
 
     if (!user) {
       return res.status(404).send({ message: "User not found." });
     }
 
-    // Concatenate firstname and lastname to form username
-    const username = `${firstname} ${lastname}`;
-
     // Update user object
     const updateUserObject: any = {
       username,
       email,
-      mobile_number,
+      phone,
       gender,
-      password
     };
 
     // Update user using Sequelize model
@@ -192,6 +225,9 @@ UserRouter.patch("/:id", async (req: Request, res: Response) => {
     return res.status(500).send({ message: `Error in updating user: ${error.message}` });
   }
 });
+
+
+
 
 
 // Soft delete user (set is_deleted to true)
