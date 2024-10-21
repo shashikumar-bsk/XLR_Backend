@@ -9,19 +9,18 @@ const InstamartOrderItemRouter = express.Router();
 // Create instamartOrderItem
 InstamartOrderItemRouter.post('/', async (req: Request, res: Response) => {
   try {
-    const { Instamartorder_id, cart_id, quantity, price } = req.body;
+    const { Instamartorder_id,quantity, price } = req.body;
 
     // Validate if InstamartOrder and AddToCart exist
     const order = await InstamartOrder.findByPk(Instamartorder_id);
-    const cartItem = await AddToCart.findByPk(cart_id);
 
-    if (!order || !cartItem) {
+    if (!order) {
       return res.status(400).send({ message: 'Invalid Instamartorder_id or cart_id' });
     }
 
     const newOrderItem = await instamartOrderItem.create({
       Instamartorder_id,
-      cart_id,
+      
       quantity,
       price,
       is_deleted: false
@@ -39,7 +38,6 @@ InstamartOrderItemRouter.get('/', async (req: Request, res: Response) => {
       where: { is_deleted: false },
       include: [
         { model: InstamartOrder, as: 'order' },
-        { model: AddToCart, as: 'cart' }
       ]
     });
     res.status(200).send(orderItems);
@@ -55,7 +53,6 @@ InstamartOrderItemRouter.get('/:id', async (req: Request, res: Response) => {
     const orderItem = await instamartOrderItem.findByPk(id, {
       include: [
         { model: InstamartOrder, as: 'order' },
-        { model: AddToCart, as: 'cart' }
       ]
     });
     if (!orderItem) {
@@ -71,7 +68,7 @@ InstamartOrderItemRouter.get('/:id', async (req: Request, res: Response) => {
 InstamartOrderItemRouter.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { Instamartorder_id, cart_id, quantity, price, is_deleted } = req.body;
+    const { Instamartorder_id, quantity, price, is_deleted } = req.body;
 
     // Validate if InstamartOrder and AddToCart exist
     if (Instamartorder_id) {
@@ -81,8 +78,8 @@ InstamartOrderItemRouter.put('/:id', async (req: Request, res: Response) => {
       }
     }
 
-    if (cart_id) {
-      const cartItem = await AddToCart.findByPk(cart_id);
+    if (Instamartorder_id) {
+      const cartItem = await InstamartOrder.findByPk(Instamartorder_id);
       if (!cartItem) {
         return res.status(400).send({ message: 'Invalid cart_id' });
       }
@@ -94,7 +91,7 @@ InstamartOrderItemRouter.put('/:id', async (req: Request, res: Response) => {
     }
 
     // Update the order item with the new values
-    await orderItem.update({ Instamartorder_id, cart_id, quantity, price, is_deleted });
+    await orderItem.update({ Instamartorder_id, quantity, price, is_deleted });
 
     res.status(200).send(orderItem);
   } catch (error: any) {
@@ -124,7 +121,7 @@ InstamartOrderItemRouter.post('/checkout', async (req: Request, res: Response) =
   const { user_id, total_price, cart_id,quantity, address_id, payment_method } = req.body;
 
   // Validate required fields
-  if (!user_id || !total_price || !cart_id || !quantity || !address_id || !payment_method) {
+  if (!user_id || !total_price ||!quantity || !address_id || !payment_method) {
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
@@ -146,7 +143,6 @@ InstamartOrderItemRouter.post('/checkout', async (req: Request, res: Response) =
     const newOrder = await InstamartOrder.create({
       user_id,
       total_price,
-      cart_id,
       quantity,
       address_id,
       payment_method,

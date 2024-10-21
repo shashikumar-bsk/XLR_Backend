@@ -2,7 +2,6 @@ import express, { Request, Response } from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
-import OTP from '../db/models/Otpmodel';
 import User from '../db/models/users';
 
 dotenv.config();
@@ -118,7 +117,7 @@ OTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
         const token = jwt.sign(
           { id: user.id, phone: sanitizedPhone , name:user.username, service_id}, // Include user ID in payload
           JWT_SECRET, 
-          { expiresIn: '12h' }
+          { expiresIn: '7d' }
         );
         console.log('JWT Token:', token,phone,); // Log the token
 

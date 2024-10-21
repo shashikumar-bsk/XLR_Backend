@@ -18,7 +18,7 @@ interface vehicleBookingAttributes {
     receiver_phone: string;
     vehicle_name?: string; // Optional
     vehicle_image?: string; // Optional
-    status: 'completed' | 'pending' | 'cancelled' | 'In progress'  
+    status: 'completed' | 'pending' | 'Inprogress' | 'In progress' 
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -40,7 +40,7 @@ class vehicleBooking extends Model<vehicleBookingAttributes, vehicleBookingInput
     public receiver_phone!: string;
     public vehicle_name?: string; // Optional
     public vehicle_image?: string; // Optional
-    public status!: 'completed' | 'pending' | 'cancelled';
+    public status!: 'completed' | 'pending' | 'In progress' | 'In progress';
 
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
@@ -109,7 +109,7 @@ vehicleBooking.init({
         allowNull: true
     },
     status: {
-        type: DataTypes.ENUM('completed', 'pending', 'cancelled'),
+        type: DataTypes.ENUM('completed', 'pending', 'cancelled', 'In progress'),
         allowNull: false,
         defaultValue: 'pending'
     }
