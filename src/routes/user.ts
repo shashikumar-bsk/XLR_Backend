@@ -4,6 +4,7 @@ import multer from "multer";
 import multerS3 from "multer-s3";
 import { S3Client } from "@aws-sdk/client-s3";
 import redisClient from '../../src/redis/redis'
+import { sendNotification } from "./NotificationService";
 
 const UserRouter = express.Router();
 // Configure AWS S3
@@ -28,7 +29,8 @@ const upload = multer({
 // Create a new user
 UserRouter.post("/", async (req: Request, res: Response) => {
   try {
-    const { firstname, lastname, email, phone, gender, password } = req.body;
+    const { firstname, lastname, email, phone, gender, password, fcm_token } = req.body;
+    // const { firstname, lastname, email, phone, gender, password } = req.body;
 
     // Validate required fields
     if (!firstname || !lastname || !email || !phone || !password) {
@@ -66,13 +68,27 @@ UserRouter.post("/", async (req: Request, res: Response) => {
       email,
       phone,
       gender,
-      password
+      password,
+      fcm_token,
     };
 
     console.log("Creating User with object:", createUserObject);
 
-    // Create user using Sequelize model
+    // Create user using Sequelize model 
     const createUser = await User.create(createUserObject);
+    
+    // Frontend admin Token 
+    const adminFcmToken = 'emtTTD4AkrVs90xesAtnu0:APA91bFtW5EF7Mg-J8XD4EibBegsrfIIZH2fjIaoZUYrCi4PW9Mrm3g1Jv1tDxovA4aa3b7idpvfHgrm-204TkBQ7n_XEP9cMnazVvMWk2ujemRdgWu31TI6fo7j1nuyNM_Qk05WpVaY'; // Replace with actual admin FCM token
+    
+    // Send notification to admin
+    try {
+      console.log("Sending notification to admin for new user registration");
+      await sendNotification(adminFcmToken, 'New User Registration', `A new user has registered: ${username}`);
+      console.log("Notification sent successfully");
+    } catch (error) {
+      console.error("Error sending notification:", error);
+    }
+
 
     return res.status(200).send({ message: "User created successfully", data: createUser });
   } catch (error: any) {
