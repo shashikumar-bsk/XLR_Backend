@@ -7,6 +7,7 @@ import vehicleBooking from '../db/models/vehicleBooking';
 interface Driver {
   driverId: number;
   vehicleType: string;
+  vehicleNumber:string;
   latitude: number;
   longitude: number;
   drivername:string,
@@ -35,7 +36,7 @@ interface BookingData {
   sender_phone:string,
   receiver_name:string,
   receiver_phone:string,
-
+  otp:string,
 }
 
 // Store active drivers
@@ -92,6 +93,7 @@ export const socketHandlers = (io: SocketIOServer) => {
         sender_phone,
         receiver_name,
         receiver_phone,
+        otp,
       } = bookingData;
     
       console.log(`Booking request received from user ${userId} for driver ${driverId}`);
@@ -99,7 +101,7 @@ export const socketHandlers = (io: SocketIOServer) => {
       const driver = activeDrivers[driverId];
       if (driver) {
         try {
-          await redis.set(`booking:${bookingId}`, JSON.stringify(bookingData), 'EX', 3600); // Store booking in Redis
+          await redis.set(`booking:${bookingId}`, JSON.stringify(bookingData), 'EX', 200); // Store booking in Redis
           console.log(`Stored booking data in Redis for bookingId: ${bookingId}`);
         } catch (err: any) {
           console.error(`Failed to store booking in Redis: ${err.message}`);
@@ -120,6 +122,7 @@ export const socketHandlers = (io: SocketIOServer) => {
           sender_phone,
           receiver_name,
           receiver_phone,
+          otp,
         });
     
         console.log(`Ride request emitted to driver ${driver.driverId}`);
@@ -150,6 +153,7 @@ export const socketHandlers = (io: SocketIOServer) => {
             sender_phone,
             receiver_name,
             receiver_phone,
+            otp,
           });
         } else {
           socket.emit('bookingError', 'No drivers available with the matching vehicle type.');
@@ -180,12 +184,14 @@ export const socketHandlers = (io: SocketIOServer) => {
               return;
             }
     
-            const { drivername, phone } = JSON.parse(driverData);
+            const { vehicleType,vehicleNumber,drivername, phone } = JSON.parse(driverData);
     
             // Emit ride status with driver details to the user
             io.to(userSocketId).emit('rideRequestStatus', { 
               bookingId, 
               driverId,
+              vehicleType,
+              vehicleNumber,
               status: 'accepted',
               drivername,  // Driver's name fetched from Redis
               phone        // Driver's phone number fetched from Redis
@@ -193,6 +199,8 @@ export const socketHandlers = (io: SocketIOServer) => {
             console.log("Emitted to user", { 
               bookingId, 
               driverId,
+              vehicleType,
+              vehicleNumber,
               status: 'accepted',
               drivername,  
               phone        
@@ -209,7 +217,7 @@ export const socketHandlers = (io: SocketIOServer) => {
               };
     
               // Save the updated booking data back to Redis
-              await redis.set(`booking:${bookingId}`, JSON.stringify(updatedBooking), 'EX', 3600);
+              await redis.set(`booking:${bookingId}`, JSON.stringify(updatedBooking), 'EX', 200);
               console.log(`Updated Redis booking for bookingId: ${bookingId}`);
             }
     
@@ -243,19 +251,21 @@ export const socketHandlers = (io: SocketIOServer) => {
     /* -------------------- DRIVER SOCKET HANDLERS -------------------- */
     // Driver registers on connection
 socket.on('REGISTER_DRIVER', async (driverData: Omit<Driver, 'socketId'>) => {
-  const { driverId, vehicleType, latitude, longitude, drivername, phone } = driverData;
+  const { vehicleType, latitude, longitude, drivername, phone,vehicleNumber,driverId, } = driverData;
 
   // Log driver data for debugging
-  console.log("Registered driver", driverId, vehicleType, latitude, longitude, drivername, phone);
+  console.log("Registered driver",vehicleType, latitude, longitude, drivername, phone,vehicleNumber,driverId, );
 
   // Create the driver object to store
   const driverDetails = {
-    driverId,
+    
     vehicleType,
+    vehicleNumber,
     latitude,
     longitude,
     drivername,
     phone,
+    driverId,
     socketId: socket.id, // Store driver's socket ID
   };
 
@@ -265,7 +275,7 @@ socket.on('REGISTER_DRIVER', async (driverData: Omit<Driver, 'socketId'>) => {
   // Convert the driver object to a JSON string for Redis
   const driverKey = `driver:${driverId}`;
   try {
-    await redis.set(driverKey, JSON.stringify(driverDetails));
+    await redis.set(driverKey, JSON.stringify(driverDetails), 'EX',200);
     console.log(`Driver data stored in Redis successfully: ${driverId}`);
   } catch (error) {
     console.error(`Error storing driver data in Redis: ${error}`);
@@ -276,7 +286,7 @@ socket.on('REGISTER_DRIVER', async (driverData: Omit<Driver, 'socketId'>) => {
 
  
     /* -------------------- DRIVER LOCATION UPDATES -------------------- */
-    socket.on("driverLocation", (data: { vehicleType: string; driverId: number; latitude: number; longitude: number; drivername:string; phone:string }) => {
+    socket.on("driverLocation", (data: { vehicleType: string; driverId: number; latitude: number; longitude: number; drivername:string; phone:string; vehicleNumber:string; }) => {
       const existingDriver = activeDrivers[data.driverId];
 
       // Update driver's location if they already exist
@@ -288,6 +298,7 @@ socket.on('REGISTER_DRIVER', async (driverData: Omit<Driver, 'socketId'>) => {
         activeDrivers[data.driverId] = {
           driverId: data.driverId,
           vehicleType: data.vehicleType,
+          vehicleNumber:data.vehicleNumber,
           latitude: data.latitude,
           longitude: data.longitude,
           drivername: data.drivername,

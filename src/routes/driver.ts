@@ -58,43 +58,53 @@ DriverRouter.post("/", async (req: Request, res: Response) => {
 
 // Get driver by ID
 DriverRouter.get("/:id", async (req: Request, res: Response) => {
-  const { id } = req.params;  
+  const { id } = req.params;
 
   try {
-    // Check if the driver details are already in Redis
+    // Check if the real-time driver data is in Redis
     redisClient.get(`driver:${id}`, async (err, cachedData) => {
       if (err) {
         console.error('Redis error:', err);
         return res.status(500).send({ message: 'Internal server error.' });
       }
 
+      let realTimeData;
       if (cachedData) {
-        // If data is found in Redis, parse and return it
+        // If data is found in Redis, parse it as real-time data
         console.log('Cache hit, returning data from Redis');
-        return res.status(200).send(JSON.parse(cachedData));
+        realTimeData = JSON.parse(cachedData);
       }
 
-      // Fetch driver details from the database
-      const driver = await Driver.findOne({ where: { driver_id: id, is_deleted: false } });
+      // Fetch driver details from the database (persistent data)
+      const driver = await Driver.findOne({
+        where: { driver_id: id, is_deleted: false }
+      });
 
       if (!driver) {
         return res.status(404).send({ message: 'Driver not found.' });
       }
 
-      // Store the driver details in Redis with an expiration time of 2 seconds
-      await redisClient.set(`driver:${id}`, JSON.stringify(driver));
+      // Convert the Sequelize model to JSON
+      const persistentData = driver.toJSON();
 
-      await redisClient.expire(`driver:${id}`, 2);
+      // Merge persistent data from DB with real-time data from Redis (real-time data takes precedence)
+      const mergedData = {
+        ...persistentData,       // Persistent data (name, phone, etc.)
+        ...realTimeData          // Real-time data (location, socketId, etc.)
+      };
 
+      // Store the driver details in Redis with an expiration time of 100 seconds
+      await redisClient.set(`driver:${id}`, JSON.stringify(mergedData), 'EX', 100);
 
-      // Respond with the driver details
-      return res.status(200).send(driver);
+      // Respond with the merged driver details
+      return res.status(200).send(mergedData);
     });
   } catch (error: any) {
     console.error('Error in fetching driver by ID:', error);
     return res.status(500).send({ message: `Error in fetching driver: ${error.message}` });
   }
 });
+
 
 
 // Get all drivers
