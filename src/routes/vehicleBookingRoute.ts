@@ -8,7 +8,7 @@ vehicleBookingRouter.post('/', async (req: Request, res: Response) => {
     try {
         const {
             user_id,vehicle_id,pickup_address,dropoff_address,goods_type,total_price,sender_name,sender_phone,receiver_name,
-            receiver_phone,vehicle_name,vehicle_image,status = 'pending'} = req.body;
+            receiver_phone,vehicle_name,vehicle_image,status = 'pending',driver_id,payment_method} = req.body;
 
         // Validate required fields
         if (!user_id || !pickup_address || !dropoff_address || !goods_type || !total_price || !sender_name || !sender_phone || !receiver_name || !receiver_phone) {
@@ -18,7 +18,7 @@ vehicleBookingRouter.post('/', async (req: Request, res: Response) => {
         // Create vehicleBooking
         const booking = await vehicleBooking.create({
             user_id,vehicle_id,pickup_address,dropoff_address,goods_type,total_price,sender_name,sender_phone,receiver_name,
-            receiver_phone,vehicle_name,vehicle_image,status
+            receiver_phone,vehicle_name,vehicle_image,status,driver_id,payment_method
         });
 
         return res.status(200).send({ message: 'Booking created successfully', data: booking });
@@ -142,7 +142,7 @@ vehicleBookingRouter.patch('/:id', async (req: Request, res: Response) => {
         const { id } = req.params;
         const {
             user_id, vehicle_id, pickup_address, dropoff_address, goods_type, total_price,
-            sender_name, sender_phone, receiver_name, receiver_phone, vehicle_name, vehicle_image, status
+            sender_name, sender_phone, receiver_name, receiver_phone, vehicle_name, vehicle_image, status,driver_id,payment_method
         } = req.body;
 
         const booking = await vehicleBooking.findOne({ where: { id } });
@@ -154,7 +154,7 @@ vehicleBookingRouter.patch('/:id', async (req: Request, res: Response) => {
         // Update the booking
         await vehicleBooking.update({
             user_id, vehicle_id, pickup_address, dropoff_address, goods_type, total_price,
-            sender_name, sender_phone, receiver_name, receiver_phone, vehicle_name, vehicle_image, status
+            sender_name, sender_phone, receiver_name, receiver_phone, vehicle_name, vehicle_image, status,driver_id, payment_method
         }, {
             where: { id }
         });

@@ -3,10 +3,12 @@ import { DataTypes, Model, Optional } from 'sequelize';
 import sequelizeConnection from '../config';
 import User from './users';
 import Vehicle from './Vehicles';
+import Driver from './driver';
 
 interface vehicleBookingAttributes {
     id: number;
     user_id: number;
+    driver_id: number;
     vehicle_id?: number; // Optional vehicle_id
     pickup_address: string;
     dropoff_address: string;
@@ -18,6 +20,7 @@ interface vehicleBookingAttributes {
     receiver_phone: string;
     vehicle_name?: string; // Optional
     vehicle_image?: string; // Optional
+    payment_method?: string; // Optional
     status: 'completed' | 'pending' | 'Inprogress' | 'In progress' 
     createdAt?: Date;
     updatedAt?: Date;
@@ -29,6 +32,7 @@ export interface vehicleBookingOutput extends Required<vehicleBookingAttributes>
 class vehicleBooking extends Model<vehicleBookingAttributes, vehicleBookingInput> implements vehicleBookingAttributes {
     public id!: number;
     public user_id!: number;
+    public driver_id!: number;
     public vehicle_id?: number; // Optional vehicle_id
     public pickup_address!: string;
     public dropoff_address!: string;
@@ -40,6 +44,7 @@ class vehicleBooking extends Model<vehicleBookingAttributes, vehicleBookingInput
     public receiver_phone!: string;
     public vehicle_name?: string; // Optional
     public vehicle_image?: string; // Optional
+    public payment_method?: string; // Optional
     public status!: 'completed' | 'pending' | 'In progress' | 'In progress';
 
     public readonly createdAt!: Date;
@@ -59,6 +64,15 @@ vehicleBooking.init({
             model: User,
             key: 'id'
         }
+    },
+    driver_id:{
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: Driver,
+            key: 'driver_id' // Ensure this matches the user model primary key
+        }
+
     },
     vehicle_id: {
         type: DataTypes.INTEGER,
@@ -108,6 +122,11 @@ vehicleBooking.init({
         type: DataTypes.STRING(255),
         allowNull: true
     },
+    payment_method: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+    },
+    // Add more fields as needed...
     status: {
         type: DataTypes.ENUM('completed', 'pending', 'cancelled', 'In progress'),
         allowNull: false,
