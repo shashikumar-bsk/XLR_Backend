@@ -13,7 +13,7 @@ interface DriverAttributes {
     phone: string;
     active: boolean;
     is_deleted: boolean;
-    status: string; // Updated to string type
+    status: boolean; // Updated to string type
     profile_image?: string;  // New field for profile image
     title: string;  // Add title attribute
     notification_status: boolean;  // Add notification_status attribute
@@ -37,7 +37,7 @@ class Driver extends Model<DriverAttributes, DriverInput> implements DriverAttri
     public phone!: string;
     public active!: boolean;
     public is_deleted!: boolean;
-    public status!: string;  // Updated to string type
+    public status!: boolean;  // Updated to string type
     public profile_image!: string;  // New field for storing image URL
     public title!: string;  // Add title attribute
     public notification_status!: boolean;  // Add notification_status attribute
@@ -99,7 +99,8 @@ Driver.init({
         defaultValue: false
     },
     status: {
-        type: DataTypes.STRING
+        type: DataTypes.BOOLEAN,
+        defaultValue: false  
     },
     profile_image: {
         type: DataTypes.STRING,  // New field for storing image URL
