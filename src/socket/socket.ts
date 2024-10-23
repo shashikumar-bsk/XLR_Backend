@@ -5,12 +5,12 @@ import vehicleBooking from '../db/models/vehicleBooking';
 
 // Driver interface
 interface Driver {
-  driverId: number;
-  vehicleType: string;
-  vehicleNumber:string;
+  driver_id: number;
+  vehicle_type: string;
+  vehicle_number:string;
   latitude: number;
   longitude: number;
-  drivername:string,
+  driver_name:string,
   phone:string,
   socketId: string; // Driver's socketId
 }
@@ -19,7 +19,7 @@ interface Driver {
 interface BookingData {
   bookingId: string;
   userId: number;
-  driverId: number;
+  driver_id: number;
   pickupAddress: {
     name:string;
     latitude: number;
@@ -84,7 +84,7 @@ export const socketHandlers = (io: SocketIOServer) => {
       const {
         bookingId,
         userId,
-        driverId,
+        driver_id,
         pickupAddress,
         dropoffAddress,
         totalPrice,
@@ -96,9 +96,9 @@ export const socketHandlers = (io: SocketIOServer) => {
         otp,
       } = bookingData;
     
-      console.log(`Booking request received from user ${userId} for driver ${driverId}`);
+      console.log(`Booking request received from user ${userId} for driver ${driver_id}`);
     
-      const driver = activeDrivers[driverId];
+      const driver = activeDrivers[driver_id];
       if (driver) {
         try {
           await redis.set(`booking:${bookingId}`, JSON.stringify(bookingData), 'EX', 200); // Store booking in Redis
@@ -113,7 +113,7 @@ export const socketHandlers = (io: SocketIOServer) => {
         io.to(driver.socketId).emit('BOOKING_REQUEST', {
           bookingId,
           userId,
-          driverId, // Include the driverId
+          driver_id, // Include the driver_id
           pickupAddress,
           dropoffAddress,
           totalPrice,
@@ -125,26 +125,26 @@ export const socketHandlers = (io: SocketIOServer) => {
           otp,
         });
     
-        console.log(`Ride request emitted to driver ${driver.driverId}`);
+        console.log(`Ride request emitted to driver ${driver.driver_id}`);
     
         // Store the user socketId and bookingId mapping
         activeUserBookings[bookingId] = socket.id;
     
       } else {
-        console.log(`Driver ${driverId} not found or not connected.`);
+        console.log(`Driver ${driver_id} not found or not connected.`);
         const availableDrivers = Object.values(activeDrivers).filter(
-          (d) => d.vehicleType === bookingData.vehicleName
+          (d) => d.vehicle_type === bookingData.vehicleName
         );
     
         if (availableDrivers.length > 0) {
           const newDriver = availableDrivers[0]; // Optionally implement more complex selection logic here
-          console.log(`Assigning booking to another driver ${newDriver.driverId}`);
+          console.log(`Assigning booking to another driver ${newDriver.driver_id}`);
     
           // Emit ride request to the newly assigned driver, including the new driver's ID
           io.to(newDriver.socketId).emit('BOOKING_REQUEST', {
             bookingId,
             userId,
-            driverId: newDriver.driverId, // Use the new driver's ID
+            driver_id: newDriver.driver_id, // Use the new driver's ID
             pickupAddress,
             dropoffAddress,
             totalPrice,
@@ -164,11 +164,11 @@ export const socketHandlers = (io: SocketIOServer) => {
 
     /* -------------------- DRIVER SOCKET HANDLERS -------------------- */
     socket.on('DRIVER_RESPONSE', async (response: { 
-      driverId: string; 
+      driver_id: string; 
       bookingId: string; 
       status: string; 
     }) => {
-      const { driverId, bookingId, status } = response;
+      const { driver_id, bookingId, status } = response;
     
       const userSocketId = activeUserBookings[bookingId]; // Get the user's socket ID
     
@@ -178,31 +178,31 @@ export const socketHandlers = (io: SocketIOServer) => {
     
           try {
             // Fetch driver details from Redis
-            const driverData = await redis.get(`driver:${driverId}`);
+            const driverData = await redis.get(`driver:${driver_id}`);
             if (!driverData) {
-              console.error(`Driver data for driverId: ${driverId} not found in Redis`);
+              console.error(`Driver data for driver_id: ${driver_id} not found in Redis`);
               return;
             }
     
-            const { vehicleType,vehicleNumber,drivername, phone } = JSON.parse(driverData);
+            const { vehicle_type,vehicle_number,driver_name, phone } = JSON.parse(driverData);
     
             // Emit ride status with driver details to the user
             io.to(userSocketId).emit('rideRequestStatus', { 
               bookingId, 
-              driverId,
-              vehicleType,
-              vehicleNumber,
+              driver_id,
+              vehicle_type,
+              vehicle_number,
               status: 'accepted',
-              drivername,  // Driver's name fetched from Redis
+              driver_name,  // Driver's name fetched from Redis
               phone        // Driver's phone number fetched from Redis
             });
             console.log("Emitted to user", { 
               bookingId, 
-              driverId,
-              vehicleType,
-              vehicleNumber,
+              driver_id,
+              vehicle_type,
+              vehicle_number,
               status: 'accepted',
-              drivername,  
+              driver_name,  
               phone        
             });
     
@@ -212,7 +212,7 @@ export const socketHandlers = (io: SocketIOServer) => {
               const updatedBooking = { 
                 ...JSON.parse(bookingData), 
                 status: 'accepted',
-                drivername,  
+                driver_name,  
                 phone        
               };
     
@@ -234,13 +234,13 @@ export const socketHandlers = (io: SocketIOServer) => {
             console.error(`Failed to fetch driver or update booking in Redis: ${err.message}`);
           }
     
-          console.log(`Driver ${driverId} accepted ride ${bookingId}`);
+          console.log(`Driver ${driver_id} accepted ride ${bookingId}`);
         } else {
           io.to(userSocketId).emit('rideRequestStatus', { 
             bookingId, 
             status: 'rejected' 
           });
-          console.log(`Driver ${driverId} rejected ride ${bookingId}`);
+          console.log(`Driver ${driver_id} rejected ride ${bookingId}`);
         }
       } else {
         console.log(`User for booking ${bookingId} not found`);
@@ -251,43 +251,43 @@ export const socketHandlers = (io: SocketIOServer) => {
     /* -------------------- DRIVER SOCKET HANDLERS -------------------- */
     // Driver registers on connection
 socket.on('REGISTER_DRIVER', async (driverData: Omit<Driver, 'socketId'>) => {
-  const { vehicleType, latitude, longitude, drivername, phone,vehicleNumber,driverId, } = driverData;
+  const { vehicle_type, latitude, longitude, driver_name, phone,vehicle_number,driver_id, } = driverData;
 
   // Log driver data for debugging
-  console.log("Registered driver",vehicleType, latitude, longitude, drivername, phone,vehicleNumber,driverId, );
+  console.log("Registered driver",vehicle_type, latitude, longitude, driver_name, phone,vehicle_number,driver_id, );
 
   // Create the driver object to store
   const driverDetails = {
     
-    vehicleType,
-    vehicleNumber,
+    vehicle_type,
+    vehicle_number,
     latitude,
     longitude,
-    drivername,
+    driver_name,
     phone,
-    driverId,
+    driver_id,
     socketId: socket.id, // Store driver's socket ID
   };
 
   // Store driver in activeDrivers list (local memory)
-  activeDrivers[driverId] = driverDetails;
+  activeDrivers[driver_id] = driverDetails;
 
   // Convert the driver object to a JSON string for Redis
-  const driverKey = `driver:${driverId}`;
+  const driverKey = `driver:${driver_id}`;
   try {
     await redis.set(driverKey, JSON.stringify(driverDetails), 'EX',200);
-    console.log(`Driver data stored in Redis successfully: ${driverId}`);
+    console.log(`Driver data stored in Redis successfully: ${driver_id}`);
   } catch (error) {
     console.error(`Error storing driver data in Redis: ${error}`);
   }
-  console.log(`Driver registered successfully: ${driverId}`);
+  console.log(`Driver registered successfully: ${driver_id}`);
 });
 
 
  
     /* -------------------- DRIVER LOCATION UPDATES -------------------- */
-    socket.on("driverLocation", (data: { vehicleType: string; driverId: number; latitude: number; longitude: number; drivername:string; phone:string; vehicleNumber:string; }) => {
-      const existingDriver = activeDrivers[data.driverId];
+    socket.on("driverLocation", (data: { vehicleType: string; driver_id: number; latitude: number; longitude: number; drivername:string; phone:string; vehicleNumber:string; }) => {
+      const existingDriver = activeDrivers[data.driver_id];
 
       // Update driver's location if they already exist
       if (existingDriver) {
@@ -295,13 +295,13 @@ socket.on('REGISTER_DRIVER', async (driverData: Omit<Driver, 'socketId'>) => {
         existingDriver.longitude = data.longitude;
       } else {
         // Add new driver if they don't exist
-        activeDrivers[data.driverId] = {
-          driverId: data.driverId,
-          vehicleType: data.vehicleType,
-          vehicleNumber:data.vehicleNumber,
+        activeDrivers[data.driver_id] = {
+          driver_id: data.driver_id,
+          vehicle_type: data.vehicleType,
+          vehicle_number:data.vehicleNumber,
           latitude: data.latitude,
           longitude: data.longitude,
-          drivername: data.drivername,
+          driver_name: data.drivername,
           phone: data.phone,
           socketId: socket.id,
         };
@@ -332,10 +332,10 @@ socket.on('REGISTER_DRIVER', async (driverData: Omit<Driver, 'socketId'>) => {
       console.log(`Client disconnected: ${socket.id}`);
 
       // Remove driver from active list on disconnect
-      for (const driverId in activeDrivers) {
-        if (activeDrivers[driverId].socketId === socket.id) {
-          console.log(`Driver ${driverId} disconnected`);
-          delete activeDrivers[driverId];
+      for (const driver_id in activeDrivers) {
+        if (activeDrivers[driver_id].socketId === socket.id) {
+          console.log(`Driver ${driver_id} disconnected`);
+          delete activeDrivers[driver_id];
           break;
         }
       }

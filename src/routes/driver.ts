@@ -1,9 +1,7 @@
 import express, { Request, Response } from "express";
 import Driver from "../db/models/driver";
-
 import { clusterPoints, rawDataPoints } from "../services/greedy_cluster";
 import redisClient from '../../src/redis/redis';
-
 
 const DriverRouter = express.Router();
 
@@ -94,7 +92,7 @@ DriverRouter.get("/:id", async (req: Request, res: Response) => {
       };
 
       // Store the driver details in Redis with an expiration time of 100 seconds
-      await redisClient.set(`driver:${id}`, JSON.stringify(mergedData), 'EX', 100);
+      await redisClient.set(`driver:${id}`, JSON.stringify(mergedData), 'EX', 200);
 
       // Respond with the merged driver details
       return res.status(200).send(mergedData);
@@ -104,8 +102,6 @@ DriverRouter.get("/:id", async (req: Request, res: Response) => {
     return res.status(500).send({ message: `Error in fetching driver: ${error.message}` });
   }
 });
-
-
 
 // Get all drivers
 DriverRouter.get("/", async (req: Request, res: Response) => {
@@ -189,7 +185,7 @@ DriverRouter.get("/", async (req: Request, res: Response) => {
 DriverRouter.patch("/:id/upadate", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { driver_name, email, phone, gender,vehicle_type, vehicle_number } = req.body;
+    const { driver_name, email, phone, gender,vehicle_type, vehicle_number,status } = req.body;
 
     // Fetch driver by id and check if not deleted
     const driver = await Driver.findOne({ where: { driver_id: id, is_deleted: false } });
@@ -206,6 +202,7 @@ DriverRouter.patch("/:id/upadate", async (req: Request, res: Response) => {
       gender,
       vehicle_type,
       vehicle_number,
+      status
     };
 
     // Update driver using Sequelize model
