@@ -56,7 +56,7 @@ async function init() {
 
 
     await User.sync({ alter: isDev });
-    await Driver.sync({ alter: true });
+    await Driver.sync({ alter: isDev });
     await DriverDocs.sync({ alter: isDev });
     await ServiceType.sync({ alter: isDev });
     await ReceiverDetails.sync({ alter: isDev });
