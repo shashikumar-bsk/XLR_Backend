@@ -248,40 +248,81 @@ export const socketHandlers = (io: SocketIOServer) => {
     });
     
 
+  // When driver starts the ride
+    socket.on('ride_started', async (data) => {
+      const { driver_id, bookingId } = data;
+      
+      try {
+        // Fetch user socket ID from active bookings
+        const userSocketId = activeUserBookings[bookingId];
+  
+        if (userSocketId) {
+          console.log(`Notifying user with socket ID ${userSocketId} that the ride has started.`);
+  
+          // Fetch driver details from Redis or your database
+          const driverData = await redis.get(`driver:${driver_id}`);
+          if (!driverData) {
+            console.error(`Driver data for driver_id: ${driver_id} not found in Redis`);
+            return;
+          }
+  
+          const { driver_name, vehicle_type, vehicle_number, phone } = JSON.parse(driverData);
+  
+          // Emit ride start event to the user
+          io.to(userSocketId).emit('rideStatusUpdate', {
+            bookingId,
+            driver_id,
+            status: 'ride_started',
+            driver_name,
+            vehicle_type,
+            vehicle_number,
+            phone,
+          });
+  
+          console.log(`Emitted ride start to user: ${userSocketId}, for booking: ${bookingId}`);
+        } else {
+          console.log(`User for booking ${bookingId} not found.`);
+        }
+      } catch (err) {
+        console.error('Error starting the ride:', err);
+      }
+    });
+    
+
     /* -------------------- DRIVER SOCKET HANDLERS -------------------- */
     // Driver registers on connection
-socket.on('REGISTER_DRIVER', async (driverData: Omit<Driver, 'socketId'>) => {
-  const { vehicle_type, latitude, longitude, driver_name, phone,vehicle_number,driver_id, } = driverData;
+    socket.on('REGISTER_DRIVER', async (driverData: Omit<Driver, 'socketId'>) => {
+      const { vehicle_type, latitude, longitude, driver_name, phone, vehicle_number, driver_id } = driverData;
 
-  // Log driver data for debugging
-  console.log("Registered driver",vehicle_type, latitude, longitude, driver_name, phone,vehicle_number,driver_id, );
+      console.log("Registered driver", vehicle_type, latitude, longitude, driver_name, phone, vehicle_number, driver_id);
 
-  // Create the driver object to store
-  const driverDetails = {
-    
-    vehicle_type,
-    vehicle_number,
-    latitude,
-    longitude,
-    driver_name,
-    phone,
-    driver_id,
-    socketId: socket.id, // Store driver's socket ID
-  };
+      // Check if driver already exists, if yes update the socketId
+      if (activeDrivers[driver_id]) {
+        activeDrivers[driver_id].socketId = socket.id; // Update existing socket ID
+      } else {
+        // Create new driver entry if it does not exist
+        activeDrivers[driver_id] = {
+          vehicle_type,
+          vehicle_number,
+          latitude,
+          longitude,
+          driver_name,
+          phone,
+          driver_id,
+          socketId: socket.id, // Store driver's socket ID
+        };
+      }
 
-  // Store driver in activeDrivers list (local memory)
-  activeDrivers[driver_id] = driverDetails;
-
-  // Convert the driver object to a JSON string for Redis
-  const driverKey = `driver:${driver_id}`;
-  try {
-    await redis.set(driverKey, JSON.stringify(driverDetails), 'EX',200);
-    console.log(`Driver data stored in Redis successfully: ${driver_id}`);
-  } catch (error) {
-    console.error(`Error storing driver data in Redis: ${error}`);
-  }
-  console.log(`Driver registered successfully: ${driver_id}`);
-});
+      // Store driver in Redis
+      const driverKey = `driver:${driver_id}`;
+      try {
+        await redis.set(driverKey, JSON.stringify(activeDrivers[driver_id]), 'EX', 200);
+        console.log(`Driver data stored in Redis successfully: ${driver_id}`);
+      } catch (error) {
+        console.error(`Error storing driver data in Redis: ${error}`);
+      }
+      console.log(`Driver registered successfully: ${driver_id}`);
+    });
 
 
  

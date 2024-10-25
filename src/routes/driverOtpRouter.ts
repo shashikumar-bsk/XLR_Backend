@@ -35,25 +35,49 @@ DriverOTPRouter.post('/send-otp', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid phone number format' });
     }
 
-    // Check if the driver exists and is active
-    const existingDriver = await Driver.findOne({
-      where: {
-        phone: sanitizedPhone,
-        active: true // Use a boolean value directly, not a string.
-      },
-    });
+    // Check if the driver exists in the database
+    const driver = await Driver.findOne({ where: { phone: sanitizedPhone } });
 
-    if (!existingDriver) {
-      return res.status(404).json({ error: 'Driver is inactive or not found' });
+    if (!driver) {
+      // If the driver does not exist, it means a new driver, send OTP
+      const otpResponse = await axios.post(
+        'https://auth.otpless.app/auth/otp/v1/send',
+        {
+          phoneNumber: `91${sanitizedPhone}`,
+          otpLength: 4,
+          channel: 'WHATSAPP',
+          expiry: 600, // OTP expiry in seconds (10 minutes)
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            clientId: CLIENT_ID,
+            clientSecret: CLIENT_SECRET,
+            appId: APP_ID,
+          },
+        }
+      );
+
+      console.log('OTP send response:', otpResponse.data);
+
+      if (otpResponse.data.orderId) {
+        return res.json({ message: 'OTP sent successfully', orderId: otpResponse.data.orderId });
+      } else {
+        throw new Error(`OTP service error: ${otpResponse.data.message || 'Unknown error'}`);
+      }
     }
 
+    // If the driver exists, check their status
+    if (!driver.active) {
+      return res.status(403).json({ error: 'Driver is inactive.' });
+    }
     // Send OTP via external service
     const otpResponse = await axios.post(
       'https://auth.otpless.app/auth/otp/v1/send',
       {
         phoneNumber: `91${sanitizedPhone}`, // Prefix with country code
         otpLength: 4,
-        channel: 'WHATSAPP',
+        channel: 'SMS',
         expiry: 600, // OTP expiry in seconds (10 minutes)
       },
       {
@@ -81,65 +105,6 @@ DriverOTPRouter.post('/send-otp', async (req: Request, res: Response) => {
     });
   }
 });
-
-
-
-// DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
-//   const { phone, otp, orderId } = req.body;
-
-//   if (!phone || !otp || !orderId) {
-//     return res.status(400).json({ error: 'Phone number, OTP, and orderId are required' });
-//   }
-
-//   // Sanitize and validate phone number
-//   const sanitizedPhone = phone.replace(/\D/g, '');
-//   if (sanitizedPhone.length < 10 || sanitizedPhone.length > 15) {
-//     return res.status(400).json({ error: 'Invalid phone number format' });
-//   }
-
-//   try {
-//     const response = await axios.post('https://auth.otpless.app/auth/otp/v1/verify', {
-//       phoneNumber: 91+sanitizedPhone,
-//       otp,
-//       orderId
-//     }, {
-//       headers: {
-//         'Content-Type': 'application/json',
-//         'clientId': CLIENT_ID,
-//         'clientSecret': CLIENT_SECRET,
-//         'appId': APP_ID
-//       }
-//     });
-
-//     console.log('OTP verify response:', response.data);
-
-//     if (response.data.isOTPVerified) {
-//       // Fetch user by phone number
-//       const user = await Driver.findOne({ where: { phone: sanitizedPhone } });
-
-//       if (user) {
-//         // Generate JWT token
-//         const token = jwt.sign(
-//           { id: user.driver_id, phone: sanitizedPhone ,service_id}, // Include user ID in payload
-//           JWT_SECRET, 
-//           { expiresIn: '12h' }
-//         );
-//         console.log('JWT Token:', token); // Log the token
-
-//         res.json({ message: 'OTP Verified Successfully!', token });
-//       } else {
-//         res.status(404).json({ error: 'User not found' });
-//       }
-//     } else {
-//       res.status(400).json({ error: 'Invalid OTP or phone number' });
-//     }
-//   } catch (error: any) {
-//     console.error('Error verifying OTP:', error.response?.data || error.message);
-//     res.status(error.response?.status || 500).json({
-//       error: `Failed to verify OTP: ${error.response?.data?.message || error.message}`
-//     });
-//   }
-// });
 
 DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
   const { phone, otp, orderId } = req.body;

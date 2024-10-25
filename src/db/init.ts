@@ -32,7 +32,6 @@ import CartItemRest from './models/CartItemRestaurants';
 import InstamartOrder from './models/instamartOrder';
 import instamartOrderItem from './models/instamartOrderItems';
 import dish from './models/dish';
-// import Payment from './models/payment';
 import Fare from './models/Fare'
 import vehicleBooking from './models/vehicleBooking';
 
