@@ -117,6 +117,7 @@ DriverDocsRouter.get('/:id', async (req: Request, res: Response) => {
 
 
 // Get all documents for a specific driver
+
 DriverDocsRouter.get('/driver/:driver_id', async (req: Request, res: Response) => {
   const { driver_id } = req.params;
 
@@ -129,30 +130,61 @@ DriverDocsRouter.get('/driver/:driver_id', async (req: Request, res: Response) =
       }
 
       if (cachedData) {
-        // If data is found in Redis, parse and return it
         console.log('Cache hit, returning data from Redis');
         return res.status(200).send(JSON.parse(cachedData));
       }
 
       // Check if driver exists and is not deleted
-      const driver = await Driver.findOne({ where: { driver_id, is_deleted: false } });
+      const driver = await Driver.findOne({
+        where: { driver_id, is_deleted: false },
+        attributes: ['document_status'], // Fetch only document_status field
+      });
+
       if (!driver) {
         return res.status(404).send({ message: 'Driver not found or is deleted.' });
+      }
+
+      // If the driver's document status is approved, respond accordingly
+      if (driver.document_status === 'approved') {
+        return res.status(200).send({
+          message: 'All documents are approved.',
+          status: 'approved',
+        });
       }
 
       // Fetch driver documents from the database
       const driverDocs = await DriverDocs.findAll({ where: { driver_id } });
 
+      // Check for required documents
+      const requiredDocTypes = [
+        'Pancard',
+        'Aadhar card',
+        'Registration certificate',
+        'Driving License',
+        'Insurance'
+      ];
+      const uploadedDocTypes = driverDocs.map(doc => doc.doc_type);
+      const missingDocs = requiredDocTypes.filter(docType => !uploadedDocTypes.includes(docType));
+
+      if (missingDocs.length > 0) {
+        return res.status(200).send({
+          message: 'Some documents are missing.',
+          missingDocuments: missingDocs,
+          uploadedDocuments: uploadedDocTypes,
+        });
+      }
+
       // Store the driver documents in Redis with an expiration time of 2 seconds
       await redisClient.set(`driverDocs:${driver_id}`, JSON.stringify(driverDocs));
       await redisClient.expire(`driverDocs:${driver_id}`, 2);
 
-      // Respond with the driver documents
       return res.status(200).send(driverDocs);
     });
   } catch (error: any) {
     console.error('Error in fetching driver documents:', error);
-    return res.status(500).send({ message: `Error in fetching driver documents: ${error.message}` });
+    return res.status(500).send({
+      message: `Error in fetching driver documents: ${error.message}`,
+    });
   }
 });
 
@@ -259,5 +291,51 @@ DriverDocsRouter.get('/', async (req: Request, res: Response) => {
     return res.status(500).send({ message: `Error in fetching pending driver documents: ${error.message}` });
   }
 });
+
+
+DriverDocsRouter.patch('/driver/:driverId', async (req: Request, res: Response) => {
+  try {
+    const { driverId } = req.params;
+    const { doc_type, front_image, back_image, doc_number, status } = req.body;
+
+    // If it's a status update, doc_type can be skipped
+    if (!doc_type && !status) {
+      return res.status(400).json({ message: 'Either document type or status is required.' });
+    }
+
+    // Handle document update if `doc_type` is provided
+    if (doc_type) {
+      const driverDoc = await DriverDocs.findOne({
+        where: { driver_id: driverId, doc_type },
+      });
+
+      if (!driverDoc) {
+        return res.status(404).send({ message: 'Driver document not found.' });
+      }
+
+      const updateDriverDocsObject = { front_image, back_image, doc_number, status };
+      await DriverDocs.update(updateDriverDocsObject, { where: { doc_id: driverDoc.doc_id } });
+    }
+
+    // If all required documents are uploaded, update driver status
+    const allDocumentsUploaded = await DriverDocs.findAll({
+      where: { driver_id: driverId, },
+    });
+
+    const expectedDocumentCount = 5; // Adjust based on your requirements
+    if (allDocumentsUploaded.length === expectedDocumentCount) {
+      await Driver.update(
+        { document_status: 'under_verification' },
+        { where: { driver_id: driverId } }
+      );
+    }
+
+    return res.status(200).send({ message: 'Driver status or document updated successfully' });
+  } catch (error: any) {
+    console.error('Error in updating driver document:', error);
+    return res.status(500).send({ message: `Error: ${error.message}` });
+  }
+});
+
 
 export default DriverDocsRouter;
