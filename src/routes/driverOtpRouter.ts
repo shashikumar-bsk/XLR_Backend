@@ -113,51 +113,75 @@ DriverOTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Phone number, OTP, and orderId are required' });
   }
 
-  // Sanitize and validate phone number
   const sanitizedPhone = phone.replace(/\D/g, '');
   if (sanitizedPhone.length < 10 || sanitizedPhone.length > 15) {
     return res.status(400).json({ error: 'Invalid phone number format' });
   }
 
   try {
-    // Verify the OTP using an external service
     const response = await axios.post('https://auth.otpless.app/auth/otp/v1/verify', {
-      phoneNumber: 91+sanitizedPhone,
+      phoneNumber: `91${sanitizedPhone}`,
       otp,
       orderId,
     }, {
       headers: {
         'Content-Type': 'application/json',
-        'clientId': CLIENT_ID,
-        'clientSecret': CLIENT_SECRET,
-        'appId': APP_ID,
+        clientId: CLIENT_ID,
+        clientSecret: CLIENT_SECRET,
+        appId: APP_ID,
       }
     });
-    console.log('OTP verify response:', response.data);
 
     if (response.data.isOTPVerified) {
-      // Check if the driver exists
       const driver = await Driver.findOne({ where: { phone: sanitizedPhone } });
 
       if (driver) {
-        // Generate a JWT token with driver ID
-        const token = jwt.sign(
-          { id: driver.driver_id, phone: sanitizedPhone }, // Include user ID in payload
-          JWT_SECRET,
-          { expiresIn: '12h' }
-        );
-        console.log('JWT Token:', token);
-        return res.json({ message: 'OTP Verified Successfully!', token });
-      }else {
-        res.status(404).json({ error: 'User not found' });
+        const driverData = {
+          driverId: driver.driver_id,
+          phone: sanitizedPhone,
+          document_status: driver.document_status,
+        };
+
+        // Check document status
+        switch (driver.document_status) {
+          case 'pending':
+            return res.status(200).json({
+              message: 'Documents are pending. Please upload your documents.',
+              ...driverData,
+            });
+
+          case 'under_verification':
+            return res.status(200).json({
+              message: 'Documents are under verification.',
+              ...driverData,
+            });
+
+          case 'approved':
+            const token = jwt.sign(
+              { id: driver.driver_id, phone: sanitizedPhone },
+              JWT_SECRET,
+              { expiresIn: '12h' }
+            );
+            console.log('JWT Token:', token);
+            return res.json({
+              message: 'OTP Verified Successfully!',
+              token,
+              ...driverData,
+            });
+
+          default:
+            return res.status(400).json({ message: 'Invalid document status.' });
+        }
+      } else {
+        return res.status(404).json({ error: 'Driver not found' });
       }
     } else {
-      res.status(400).json({ error: 'Invalid OTP or phone number' });
+      return res.status(400).json({ error: 'Invalid OTP or phone number' });
     }
   } catch (error: any) {
     console.error('Error verifying OTP:', error.response?.data || error.message);
     res.status(error.response?.status || 500).json({
-      error: `Failed to verify OTP: ${error.response?.data?.message || error.message}`
+      error: `Failed to verify OTP: ${error.response?.data?.message || error.message}`,
     });
   }
 });

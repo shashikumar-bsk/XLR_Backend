@@ -18,6 +18,7 @@ interface DriverAttributes {
     title: string;  // Add title attribute
     notification_status: boolean;  // Add notification_status attribute
     type?:string;
+    document_status: 'pending' | 'under_verification' | 'approved';  // New field
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -42,6 +43,7 @@ class Driver extends Model<DriverAttributes, DriverInput> implements DriverAttri
     public title!: string;  // Add title attribute
     public notification_status!: boolean;  // Add notification_status attribute
     public type!:string; // Add type attribute
+    public document_status!: 'pending' | 'under_verification' | 'approved';  // New attribute
 
 
 
@@ -120,7 +122,12 @@ Driver.init({
         type: DataTypes.STRING,  // Specify the type as STRING
          allowNull: false ,// You can change this to false if it's a required field
         defaultValue: 'driver' 
-    }
+    },
+    document_status: {
+        type: DataTypes.ENUM("pending", "under_verification", "approved"),  // Enum field
+        allowNull: false,
+        defaultValue: "pending",  // Default value
+    },
 }, {
     timestamps: true,
     sequelize: sequelizeConnection,
