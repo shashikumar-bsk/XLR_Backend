@@ -21,7 +21,7 @@ interface vehicleBookingAttributes {
     vehicle_name?: string; // Optional
     vehicle_image?: string; // Optional
     payment_method?: string; // Optional
-    status: 'completed' | 'pending' | 'Inprogress' | 'In progress' 
+    status: 'completed' | 'pending' | 'cancelled' | 'In progress' 
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -45,7 +45,7 @@ class vehicleBooking extends Model<vehicleBookingAttributes, vehicleBookingInput
     public vehicle_name?: string; // Optional
     public vehicle_image?: string; // Optional
     public payment_method?: string; // Optional
-    public status!: 'completed' | 'pending' | 'In progress' | 'In progress';
+    public status!: 'completed' | 'pending' | 'cancelled' | 'In progress';
 
     public readonly createdAt!: Date;
     public readonly updatedAt!: Date;
