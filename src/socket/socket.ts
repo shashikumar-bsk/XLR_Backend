@@ -78,6 +78,28 @@ export const initializeSocket = (server: HttpServer) => {
 export const socketHandlers = (io: SocketIOServer) => {
   io.on('connection', (socket: SocketIOSocket) => {
     console.log('Client connected:', socket.id);
+    // Store the mapping of booking ID to socket ID for users
+    socket.on('associateSocketWithBooking', (data) => {
+      const { bookingId, socketId } = data;
+      activeUserBookings[bookingId] = socketId;
+      console.log(`Associated booking ${bookingId} with socket ID ${socketId}`);
+    });
+    
+    // Function to associate the driver with their socket ID
+    socket.on('associateSocketWithDriver', (data) => {
+      const { driver_id, socketId } = data;
+    
+      // Check if the driver exists in activeDrivers
+      if (!activeDrivers[driver_id]) {
+        console.error(`Driver ${driver_id} is not registered in activeDrivers.`);
+        return; // Exit early if the driver does not exist
+      }
+    
+      // If the driver exists, set the socketId
+      activeDrivers[driver_id].socketId = socketId;
+      console.log(`Associated driver ${driver_id} with socket ID ${socketId}`);
+    });
+    
 
     /* -------------------- USER SOCKET HANDLERS -------------------- */
     socket.on('REQUEST_BOOKING', async (bookingData: BookingData) => {
@@ -212,6 +234,7 @@ export const socketHandlers = (io: SocketIOServer) => {
               const updatedBooking = { 
                 ...JSON.parse(bookingData), 
                 status: 'accepted',
+                driver_id,
                 driver_name,  
                 phone        
               };
@@ -288,13 +311,84 @@ export const socketHandlers = (io: SocketIOServer) => {
       }
     });
     
+    /* -------------------- USER SOCKET HANDLERS -------------------- */
+// Handle user trip cancellation
+socket.on('cancelTrip', async (cancelData: { 
+  bookingId: string; 
+  userId: number;
+}) => {
+  const { bookingId, userId } = cancelData;
+
+  console.log(`Cancellation request received from user ${userId} for booking ${bookingId}`);
+
+  // Fetch the booking data from Redis to get the associated driver_id
+  let driverId = null;
+  try {
+    const bookingData = await redis.get(`booking:${bookingId}`);
+    if (bookingData) {
+      const { driver_id } = JSON.parse(bookingData);
+      driverId = driver_id;
+      console.log(`Retrieved driver_id: ${driverId} for booking ${bookingId}`);
+    } else {
+      console.log(`No booking data found for bookingId: ${bookingId}`);
+    }
+  } catch (err: any) {
+    console.error(`Error retrieving booking data for ${bookingId}: ${err.message}`);
+  }
+
+  if (driverId) {
+    // Notify the connected driver about the trip cancellation
+    const driver = activeDrivers[driverId];
+    if (driver && driver.socketId) {
+      console.log("driver socket id for cancel: " + driver.socketId);
+      io.to(driver.socketId).emit('TRIP_CANCELLED_BY_USER', { 
+        bookingId, 
+        message: `User has cancelled the trip for booking ID: ${bookingId}.` 
+      });
+      console.log(`Notified driver ${driver.driver_id} of trip cancellation for booking ID: ${bookingId}`);
+    } else {
+      console.log(`Driver ${driverId} not connected or not found in active drivers.`);
+    }
+  } else {
+    console.log(`No driver found or assigned to booking ${bookingId}.`);
+  }
+
+  // Update the status in the vehicleBooking table to "cancelled"
+  try {
+    const bookingCancel = await vehicleBooking.findOne({ where: { id: bookingId } });
+    if (bookingCancel) {
+      bookingCancel.status = 'cancelled'; // Update status to "cancelled"
+      await bookingCancel.save(); // Save the changes
+      console.log(`Updated booking status to 'cancelled' for booking ID: ${bookingId}`);
+    } else {
+      console.error(`No booking found with bookingId: ${bookingId}`);
+    }
+  } catch (err: any) {
+    console.error(`Error updating booking status for ${bookingId}: ${err.message}`);
+  }
+
+  // Optional: Remove the booking from activeUserBookings if needed
+  delete activeUserBookings[bookingId];
+  
+  // Optional: Remove the booking from Redis
+  try {
+    await redis.del(`booking:${bookingId}`);
+    console.log(`Removed booking ${bookingId} from Redis.`);
+  } catch (err: any) {
+    console.error(`Error removing booking ${bookingId} from Redis: ${err.message}`);
+  }
+
+  // Notify the user that the cancellation request was processed
+  socket.emit('CANCEL_CONFIRMATION', { bookingId, status: 'cancelled' });
+});
+
 
     /* -------------------- DRIVER SOCKET HANDLERS -------------------- */
     // Driver registers on connection
     socket.on('REGISTER_DRIVER', async (driverData: Omit<Driver, 'socketId'>) => {
       const { vehicle_type, latitude, longitude, driver_name, phone, vehicle_number, driver_id } = driverData;
 
-      console.log("Registered driver", vehicle_type, latitude, longitude, driver_name, phone, vehicle_number, driver_id);
+      // console.log("Registered driver", vehicle_type, latitude, longitude, driver_name, phone, vehicle_number, driver_id);
 
       // Check if driver already exists, if yes update the socketId
       if (activeDrivers[driver_id]) {
@@ -317,11 +411,11 @@ export const socketHandlers = (io: SocketIOServer) => {
       const driverKey = `driver:${driver_id}`;
       try {
         await redis.set(driverKey, JSON.stringify(activeDrivers[driver_id]), 'EX', 200);
-        console.log(`Driver data stored in Redis successfully: ${driver_id}`);
+        // console.log(`Driver data stored in Redis successfully: ${driver_id}`);
       } catch (error) {
         console.error(`Error storing driver data in Redis: ${error}`);
       }
-      console.log(`Driver registered successfully: ${driver_id}`);
+      // console.log(`Driver registered successfully: ${driver_id}`);
     });
 
 
