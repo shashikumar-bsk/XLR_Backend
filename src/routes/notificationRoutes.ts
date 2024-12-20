@@ -89,46 +89,93 @@ firebaseNotification.post('/send-notification', async (req: Request, res: Respon
 
 
 
-//notification apis
+// //notification apis
+// firebaseNotification.get("/getAllNewnotification", async (req: Request, res: Response) => {
+//   try {
+//     // Extract page and limit from query params, use default values if not provided
+//     const page = parseInt(req.query.page as string) || 1;
+//     const limit = parseInt(req.query.limit as string)||10;
+//     // Calculate offset for pagination
+//     const offset = (page - 1) * limit;
+//     // Fetch users with notification_status set to true
+//     const { count: userCount, rows: users } = await User.findAndCountAll({
+//       where: {
+//         notification_status: true  // Only get users with notification_status set to true
+//       },
+//       order: [['createdAt', 'DESC']],  // Order by createdAt descending (newest first)
+//       limit: limit,  // Limit number of results per page
+//       offset: offset  // Offset for pagination
+//     });
+//     // Fetch drivers with notification_status set to true
+//     const { count: driverCount, rows: drivers } = await Driver.findAndCountAll({
+//       where: {
+//         notification_status: true  // Only get drivers with notification_status set to true
+//       },
+//       order: [['createdAt', 'DESC']],  // Order by createdAt descending (newest first)
+//       limit: limit,  // Limit number of results per page
+//       offset: offset  // Offset for pagination
+//     });
+//     // Combine users and drivers into a single array
+//     const combinedData = [...users, ...drivers];
+//     // Sort combined data by createdAt in descending order
+//     combinedData.sort((a, b) => {
+//       const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+//       const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+//       return dateB.getTime() - dateA.getTime(); // Descending order
+//     });
+//     // Calculate total items and total pages
+//     const totalItems = userCount + driverCount;
+//     const totalPages = Math.ceil(totalItems / limit);
+//     // Send response with combined data
+//     res.status(200).json({
+//       data: combinedData,
+//       meta: {
+//         totalItems,
+//         totalPages,
+//         currentPage: page,
+//         itemsPerPage: limit
+//       }
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// });
+
 firebaseNotification.get("/getAllNewnotification", async (req: Request, res: Response) => {
   try {
     // Extract page and limit from query params, use default values if not provided
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    // Calculate offset for pagination
-    const offset = (page - 1) * limit;
-    // Fetch users with notification_status set to true
-    const { count: userCount, rows: users } = await User.findAndCountAll({
-      where: {
-        notification_status: true  // Only get users with notification_status set to true
-      },
-      order: [['createdAt', 'DESC']],  // Order by createdAt descending (newest first)
-      limit: limit,  // Limit number of results per page
-      offset: offset  // Offset for pagination
+
+    // Fetch all users and drivers matching the criteria
+    const { count: userCount, rows: allUsers } = await User.findAndCountAll({
+      where: { notification_status: true },
+      order: [['createdAt', 'DESC']]
     });
-    // Fetch drivers with notification_status set to true
-    const { count: driverCount, rows: drivers } = await Driver.findAndCountAll({
-      where: {
-        notification_status: true  // Only get drivers with notification_status set to true
-      },
-      order: [['createdAt', 'DESC']],  // Order by createdAt descending (newest first)
-      limit: limit,  // Limit number of results per page
-      offset: offset  // Offset for pagination
+
+    const { count: driverCount, rows: allDrivers } = await Driver.findAndCountAll({
+      where: { notification_status: true },
+      order: [['createdAt', 'DESC']]
     });
+
     // Combine users and drivers into a single array
-    const combinedData = [...users, ...drivers];
-    // Sort combined data by createdAt in descending order
-    combinedData.sort((a, b) => {
+    const combinedData = [...allUsers, ...allDrivers].sort((a, b) => {
       const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
       const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
       return dateB.getTime() - dateA.getTime(); // Descending order
     });
+
     // Calculate total items and total pages
-    const totalItems = userCount + driverCount;
+    const totalItems = combinedData.length;
     const totalPages = Math.ceil(totalItems / limit);
-    // Send response with combined data
+
+    // Apply pagination: slice the data for the current page
+    const paginatedData = combinedData.slice((page - 1) * limit, page * limit);
+
+    // Send response with combined and paginated data
     res.status(200).json({
-      data: combinedData,
+      data: paginatedData,
       meta: {
         totalItems,
         totalPages,
@@ -174,7 +221,6 @@ firebaseNotification.patch("/notifications/:id/:type/read", async (req: Request,
       return res.status(200).json({ message: 'Notification status updated successfully', driver });
     }
   } catch (error) {
-    console.error('Error updating notification status:', error);
     return res.status(500).json({ message: 'Server error' });
   }
 });
