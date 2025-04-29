@@ -14,7 +14,6 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const APP_ID = process.env.APP_ID;
 const JWT_SECRET = process.env.JWT_SECRET;
 
-const service_id=1;
 
 if (!CLIENT_ID || !CLIENT_SECRET || !APP_ID || !JWT_SECRET) {
   throw new Error('CLIENT_ID, CLIENT_SECRET, APP_ID, or JWT_SECRET is not defined in environment variables');
@@ -45,7 +44,7 @@ DriverOTPRouter.post('/send-otp', async (req: Request, res: Response) => {
         {
           phoneNumber: `91${sanitizedPhone}`,
           otpLength: 4,
-          channel: 'WHATSAPP',
+          channel: 'SMS',
           expiry: 600, // OTP expiry in seconds (10 minutes)
         },
         {

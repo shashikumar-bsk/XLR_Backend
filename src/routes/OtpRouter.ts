@@ -11,8 +11,7 @@ const OTPRouter = express.Router();
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const APP_ID = process.env.APP_ID;
-const JWT_SECRET = process.env.JWT_SECRET; // Add this to your .env file
-const service_id=1;
+const JWT_SECRET = process.env.JWT_SECRET; 
 
 if (!CLIENT_ID || !CLIENT_SECRET || !APP_ID || !JWT_SECRET) {
   throw new Error('CLIENT_ID, CLIENT_SECRET, APP_ID, or JWT_SECRET is not defined in environment variables');
@@ -33,16 +32,16 @@ OTPRouter.post('/send-otp', async (req: Request, res: Response) => {
   }
 
   // Check if the user exists
-  const existingUser = await User.findOne({
-    where: {
-      phone: sanitizedPhone,
-      active: true, // Use a boolean value directly, not a string.
-    },
-  });
+  // const existingUser = await User.findOne({
+  //   where: {
+  //     phone: sanitizedPhone,
+  //     active: true, // Use a boolean value directly, not a string.
+  //   },
+  // });
 
-  if (!existingUser) {
-    return res.status(404).json({ error: 'User is inactive' });
-  }
+  // if (!existingUser) {
+  //   return res.status(404).json({ error: 'User is inactive' });
+  // }
 
   try {
     // Send OTP via external service
@@ -51,7 +50,7 @@ OTPRouter.post('/send-otp', async (req: Request, res: Response) => {
       {
         phoneNumber: `91${sanitizedPhone}`, // Prefix with country code
         otpLength: 4,
-        channel: 'WHATSAPP',
+        channel: 'SMS',
         expiry: 600, // OTP expires in 10 minutes
       },
       {
@@ -115,7 +114,7 @@ OTPRouter.post('/verify-otp', async (req: Request, res: Response) => {
       if (user) {
         // Generate JWT token
         const token = jwt.sign(
-          { id: user.id, phone: sanitizedPhone , name:user.username, service_id}, // Include user ID in payload
+          { id: user.id, phone: sanitizedPhone , name:user.username}, // Include user ID in payload
           JWT_SECRET, 
           { expiresIn: '7d' }
         );

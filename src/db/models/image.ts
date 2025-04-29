@@ -1,12 +1,9 @@
 import { Model, DataTypes, Optional } from 'sequelize';
-import sequelizeConnection from '../config'; // Adjust the path as necessary
-import restaurantRouter from '../../routes/restaurant';
+import sequelizeConnection from '../config'; 
 
 // Define the attributes for the Image model
 interface ImageAttributes {
   image_id: number;
-  entity_type: string;
-  entity_id: number;
   image_url: string;
   alt_text?: string;
   createdAt?: Date;
@@ -19,8 +16,6 @@ export interface ImageOuput extends Required<ImageAttributes> {}
 // Define the Image class
 class Image extends Model<ImageAttributes, ImageInput> implements ImageAttributes {
   public image_id!: number;
-  public entity_type!: string;
-  public entity_id!: number;
   public image_url!: string;
   public alt_text?: string;
 
@@ -37,17 +32,7 @@ Image.init({
     primaryKey: true,
     allowNull: false,
   },
-  entity_type: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    validate: {
-      isIn: [['Category', 'SubCategory', 'brand', 'product','restaurant','dish','inventory']],
-    },
-  },
-  entity_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
+
   image_url: {
     type: DataTypes.STRING,
     allowNull: false,
