@@ -21,13 +21,13 @@ async function init() {
     await DriverDocs.sync({ alter: isDev });
     await ReceiverDetails.sync({ alter: isDev });
     await DriverLocation.sync({ alter: isDev });
-    await Image.sync({alter: true});
+    await Image.sync({alter: isDev});
     await Address.sync({alter: isDev});
     await UserTransaction.sync({alter: isDev});
     await Vehicle.sync({alter: isDev});
     await SenderDetails.sync({alter: isDev});
-    await vehicleBooking.sync({alter: isDev});
     await XlrUser.sync({alter:isDev})
+    await vehicleBooking.sync({alter: true});
 
 
 }

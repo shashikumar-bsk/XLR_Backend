@@ -1,7 +1,7 @@
 // models/vehicleBooking.ts
 import { DataTypes, Model, Optional } from 'sequelize';
 import sequelizeConnection from '../config';
-import User from './users';
+import XlrUser from './xlrUser';
 import Vehicle from './Vehicles';
 import Driver from './driver';
 
@@ -61,7 +61,7 @@ vehicleBooking.init({
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: User,
+            model: XlrUser,
             key: 'id'
         }
     },
